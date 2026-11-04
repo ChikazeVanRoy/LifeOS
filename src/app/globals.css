@@ -1,0 +1,193 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@fontsource-variable/fraunces/opsz.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-display: "Fraunces Variable", ui-serif, Georgia, serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--foreground);
+  --color-muted: var(--secondary);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-faint: var(--faint);
+  --color-accent: var(--secondary);
+  --color-accent-foreground: var(--foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-track: var(--track);
+
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 14px;
+  --radius-2xl: 18px;
+  --radius-3xl: 24px;
+  --radius-4xl: 32px;
+}
+
+/* Light: warm paper. Dark: blue-black ink. Goal hues are checked for colour-blind separation. */
+:root {
+  --background: #f5f3ee;
+  --foreground: #1b1916;
+  --card: #fffefb;
+  --popover: #fffefb;
+  --primary: #1b1916;
+  --primary-foreground: #fbf9f4;
+  --secondary: #ece9e2;
+  --muted-foreground: #6c675d;
+  --faint: #99948a;
+  --track: rgba(27, 25, 22, 0.08);
+  --border: rgba(27, 25, 22, 0.085);
+  --input: rgba(27, 25, 22, 0.14);
+  --ring: rgba(27, 25, 22, 0.35);
+  --destructive: #b5382a;
+  --grid: rgba(27, 25, 22, 0.07);
+  --shadow-card: 0 1px 2px rgba(40, 32, 18, 0.04), 0 8px 24px -16px rgba(40, 32, 18, 0.12);
+  --shadow-float: 0 12px 40px -12px rgba(40, 32, 18, 0.28), 0 2px 6px rgba(40, 32, 18, 0.06);
+
+  --c-violet: #7a5ae0;
+  --c-green: #2db587;
+  --c-red: #c2412d;
+  --c-amber: #e3a432;
+  --c-blue: #2b74c2;
+  --c-teal: #3fbdb2;
+  --c-rose: #cf4f8c;
+  --c-lime: #7fa32a;
+
+  --aurora: linear-gradient(115deg, #7a5ae0 0%, #d3503f 58%, #e3a432 100%);
+  --ember: linear-gradient(180deg, #f2b33d, #e0603f);
+  --heat-empty: rgba(27, 25, 22, 0.055);
+  color-scheme: light;
+}
+
+.dark {
+  --background: #0e0e12;
+  --foreground: #f2f0eb;
+  --card: #17171c;
+  --popover: #1c1c22;
+  --primary: #f2f0eb;
+  --primary-foreground: #17171c;
+  --secondary: #24242b;
+  --muted-foreground: #9c9992;
+  --faint: #6d6b67;
+  --track: rgba(255, 255, 255, 0.08);
+  --border: rgba(255, 255, 255, 0.075);
+  --input: rgba(255, 255, 255, 0.14);
+  --ring: rgba(255, 255, 255, 0.35);
+  --destructive: #e8735f;
+  --grid: rgba(255, 255, 255, 0.07);
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.03) inset;
+  --shadow-float: 0 16px 48px -12px rgba(0, 0, 0, 0.7);
+
+  --c-violet: #8e72ee;
+  --c-green: #3fb486;
+  --c-red: #d2553f;
+  --c-amber: #dfa23a;
+  --c-blue: #3f88d4;
+  --c-teal: #45bdb0;
+  --c-rose: #d8689f;
+  --c-lime: #95b83c;
+
+  --aurora: linear-gradient(115deg, #8e72ee 0%, #e0604a 58%, #e9a23b 100%);
+  --heat-empty: rgba(255, 255, 255, 0.055);
+  color-scheme: dark;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "ss01", "cv11";
+    overscroll-behavior-y: none;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  input[type="number"]::-webkit-inner-spin-button {
+    display: none;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-3xl border bg-card;
+    box-shadow: var(--shadow-card);
+  }
+  .font-display {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    letter-spacing: -0.02em;
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+  .eyebrow {
+    @apply text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase;
+  }
+  .aurora-text {
+    background: var(--aurora);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .aurora-bg {
+    background: var(--aurora);
+    color: #fff;
+  }
+  /* Set --goal on an element, then tint with these. */
+  .goal-tint {
+    background: color-mix(in oklch, var(--goal) 13%, transparent);
+  }
+  .goal-glow {
+    box-shadow: 0 0 0 1px color-mix(in oklch, var(--goal) 22%, transparent) inset;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .safe-b {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@keyframes flicker {
+  0%, 100% { transform: scale(1) rotate(-1deg); }
+  50% { transform: scale(1.06, 1.1) rotate(1.5deg); }
+}
+.flame-live {
+  transform-origin: 50% 90%;
+  animation: flicker 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flame-live {
+    animation: none;
+  }
+}
