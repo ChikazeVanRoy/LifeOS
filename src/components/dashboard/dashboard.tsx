@@ -4,13 +4,12 @@ import { ArrowRight, Flag, NotebookPen, Sparkles } from "lucide-react";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { useMemo } from "react";
-import { toast } from "sonner";
 import { ActivityRow } from "@/components/activity-row";
 import { GoalCard } from "@/components/goal-card";
 import { useDerived } from "@/components/shell/providers";
 import { Heatmap, OVERALL_BANDS } from "@/components/viz/heatmap";
 import { Icon } from "@/components/viz/icons";
-import { AnimatedNumber, Bar, Empty, FlameIcon, goalVar, GoalBadge, Ring, SectionTitle } from "@/components/viz/primitives";
+import { AnimatedNumber, Bar, Empty, FlameIcon, goalVar, Ring, SectionTitle } from "@/components/viz/primitives";
 import { fmtLong, fmtRelative, fmtShort, localParts } from "@/lib/engine/dates";
 import type { Derived, GoalView, MilestoneView } from "@/lib/engine/derive";
 import { buildInsights } from "@/lib/engine/insights";
@@ -18,7 +17,7 @@ import { logOrder } from "@/lib/engine/stats";
 import { useMediaQuery } from "@/lib/hooks";
 import { useStore } from "@/lib/store";
 import { useUI } from "@/lib/ui";
-import { cn, fmtCompact, fmtHours, fmtNum, plural } from "@/lib/utils";
+import { fmtCompact, fmtHours, fmtNum, plural } from "@/lib/utils";
 
 const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
 const rise = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] as const } } };
@@ -134,47 +133,6 @@ function Lifetime({ d }: { d: Derived }) {
           <p className="font-display num mt-2 text-[28px] leading-none font-medium">{t.value}</p>
           <p className="mt-1 text-xs text-muted-foreground">{t.label}</p>
         </motion.div>
-      ))}
-    </div>
-  );
-}
-
-/** One tap repeats your usual session for a goal. */
-function QuickLog({ d }: { d: Derived }) {
-  const { addLog, deleteLog } = useStore.getState();
-  const openLog = useUI((s) => s.openLog);
-  const items = d.goals
-    .filter((g) => !g.pausedToday)
-    .map((g) => {
-      const last = g.logs.findLast((l) => l.minutes > 0 && !l.source);
-      const typeId = last?.typeId ?? g.goal.activityTypes[0]?.id ?? null;
-      const type = g.goal.activityTypes.find((t) => t.id === typeId);
-      return { g, typeId, label: type?.label ?? g.goal.name, minutes: last?.minutes ?? type?.defaultMinutes ?? 30 };
-    })
-    .sort((a, b) => Number(a.g.doneToday) - Number(b.g.doneToday));
-
-  const log = (i: (typeof items)[number]) => {
-    const entry = addLog({ goalId: i.g.goal.id, typeId: i.typeId, minutes: i.minutes, metrics: {} });
-    toast.success(`${i.g.goal.name}: ${i.minutes} min logged`, { action: { label: "Undo", onClick: () => deleteLog(entry.id) } });
-  };
-
-  return (
-    <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0">
-      {items.map((i) => (
-        <button
-          key={i.g.goal.id}
-          onClick={() => log(i)}
-          onContextMenu={(e) => {
-            e.preventDefault();
-            openLog({ goalId: i.g.goal.id, typeId: i.typeId });
-          }}
-          style={goalVar(i.g.goal.color)}
-          className={cn("flex h-11 shrink-0 items-center gap-2 rounded-2xl border bg-card pr-3.5 pl-2 text-sm transition-transform active:scale-95", i.g.doneToday && "opacity-60")}
-        >
-          <GoalBadge icon={i.g.goal.icon} color={i.g.goal.color} size={28} />
-          <span className="font-medium">{i.g.goal.kind === "language" ? i.g.goal.name : i.label}</span>
-          <span className="num text-muted-foreground">{i.minutes}m</span>
-        </button>
       ))}
     </div>
   );
@@ -320,8 +278,6 @@ export function Dashboard() {
   return (
     <motion.div className="space-y-5" variants={stagger} initial="hidden" animate="show">
       <motion.div variants={rise}><Hero d={d} name={name} /></motion.div>
-
-      <motion.div variants={rise}><QuickLog d={d} /></motion.div>
 
       {!isNew && <Lifetime d={d} />}
 
