@@ -17,7 +17,7 @@ import { logOrder } from "@/lib/engine/stats";
 import { useMediaQuery } from "@/lib/hooks";
 import { useStore } from "@/lib/store";
 import { useUI } from "@/lib/ui";
-import { fmtCompact, fmtHours, fmtNum, plural } from "@/lib/utils";
+import { fmtCompact, fmtHours, plural } from "@/lib/utils";
 
 const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
 const rise = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] as const } } };
@@ -110,28 +110,22 @@ function Hero({ d, name }: { d: Derived; name: string }) {
   );
 }
 
+/** Hours per area of life. Languages share one tile, however many there are. */
 function Lifetime({ d }: { d: Derived }) {
-  const creative = d.goals.find((g) => g.goal.kind === "creative");
-  const reading = d.goals.find((g) => g.goal.kind === "reading");
-  const fitness = d.goals.find((g) => g.goal.kind === "fitness");
-  const metric = creative?.goal.metrics[0];
-  const tiles = [
-    { icon: "hourglass", label: "Hours invested", value: fmtHours(d.totals.minutes).replace("h", "") },
-    ...(creative && metric
-      ? [{ icon: creative.goal.icon, label: metric.id === "words" ? "Words written" : `${metric.label} finished`, value: fmtCompact(creative.totals.metrics[metric.id] ?? 0) }]
-      : []),
-    ...(reading ? [{ icon: "book-open", label: "Books finished", value: fmtNum(reading.projects.filter((p) => p.finishedAt).length) }] : []),
-    ...(fitness ? [{ icon: "dumbbell", label: "Workouts", value: fmtNum(fitness.totals.sessions) }] : []),
-    { icon: "calendar-check", label: "Active days", value: fmtNum(d.totals.activeDays) },
-    { icon: "check-check", label: "Sessions", value: fmtCompact(d.totals.sessions) },
-  ].slice(0, 4);
+  const languages = d.goals.filter((g) => g.goal.kind === "language");
+  const languageMinutes = languages.reduce((sum, g) => sum + g.totals.minutes, 0);
+  const tiles = d.goals.flatMap((g) => {
+    if (g.goal.kind !== "language") return [{ id: g.goal.id, icon: g.goal.icon, label: g.goal.name, minutes: g.totals.minutes }];
+    if (g !== languages[0]) return [];
+    return [{ id: "languages", icon: "languages", label: languages.length > 1 ? "Languages" : g.goal.name, minutes: languageMinutes }];
+  });
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-[repeat(auto-fit,minmax(130px,1fr))]">
       {tiles.map((t) => (
-        <motion.div key={t.label} variants={rise} className="card p-4">
+        <motion.div key={t.id} variants={rise} className="card p-4 max-md:last:odd:col-span-2">
           <Icon name={t.icon} size={16} className="text-muted-foreground" strokeWidth={1.8} />
-          <p className="font-display num mt-2 text-[28px] leading-none font-medium">{t.value}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{t.label}</p>
+          <p className="font-display num mt-2 text-[28px] leading-none font-medium">{fmtHours(t.minutes)}</p>
+          <p className="mt-1 truncate text-xs text-muted-foreground">{t.label}</p>
         </motion.div>
       ))}
     </div>
