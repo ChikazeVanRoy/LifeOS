@@ -252,7 +252,7 @@ function LogBody({ preset, onDone }: { preset: LogPreset | null; onDone: () => v
                   }
                 }}
                 aria-label="Describe your activity"
-                placeholder="Describe it: read 25 pages"
+                placeholder="Describe it (optional): read 25 pages"
                 className="h-12 w-full rounded-2xl bg-secondary pr-4 pl-10 text-[15px] outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
               />
             </label>
