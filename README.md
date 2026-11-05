@@ -33,15 +33,27 @@ If the project sits in an iCloud-synced folder such as Documents, iCloud can mov
 - **Set it up your way:** pick what to track during onboarding. Add one language or several, choose a creative focus, and pick or write your own long-term roadmaps.
 - **Add anything later:** New Goal has templates for languages, creative work, fitness, reading and learning, plus a fully custom option with your own metrics and measurements.
 - **Log from anywhere:** press `N`, or use the gradient button. Type a sentence like "Read 25 pages", or tap through the form.
-- **One tap:** the row under the dashboard hero repeats your usual session for each goal.
 - **Timers** survive refreshes. Stop one and the log sheet opens with the duration filled in.
 - **Rest:** set rest days or planned breaks on a goal page or in Settings. They never break a streak, and weekly targets shrink to fit.
 
 ## Your data
 
-Data lives in this browser's IndexedDB, with localStorage as a fallback. It stays on this device and browser, and clearing site data deletes it, so export a backup regularly from Settings. A backup is a JSON file you can restore on any browser.
+Everything is saved automatically to a file on this computer, outside the project and the browser:
 
-Demo mode stores sample data under a separate key, so it never touches your real account.
+```
+~/Library/Application Support/LifeOS/data.json
+```
+
+The browser keeps a working copy so the app stays instant. If it's cleared, or you open LifeOS in another browser, the data comes back from the file. Set `LIFEOS_DATA_DIR` to keep it somewhere else.
+
+- **Saves are atomic:** a crash leaves the old file or the new one, never half of one. A damaged file falls back to the latest backup.
+- **Backups:** `backups/` keeps a copy from the start of each day for 30 days, plus a safety copy before anything removes entries, such as Reset, an import or deleting a goal. Any of them can be restored with Import in Settings.
+- **Clashes:** if two browsers change the data at once, the file keeps the first save and the other is kept as a `conflict-` backup, so neither is lost.
+- **Offline:** if the file can't be reached, changes stay in the browser and are saved once it's back.
+
+The file is readable only by your user account, but it isn't encrypted, so FileVault is what protects it if the Mac is lost. It's in your Library, which Time Machine includes. Export from Settings for a copy somewhere else.
+
+Demo mode stores sample data in the browser only, so it never touches your real account or the file.
 
 ## How it works
 

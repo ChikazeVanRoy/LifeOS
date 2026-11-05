@@ -7,6 +7,7 @@ import { createDemoData } from "./demo";
 import { importAnki, type AnkiFeed, type ImportResult } from "./engine/anki";
 import { addDays, deviceTimezone, resolveTz, todayIn } from "./engine/dates";
 import { withSchedule } from "./engine/streaks";
+import { connectFile, pushToFile, reconcile, rereadRevision } from "./file-sync";
 import { createLog, type NewLog } from "./log";
 import { migrate } from "./migrate";
 import { storage } from "./storage";
@@ -96,14 +97,27 @@ const tzNow = (s: Settings) => resolveTz(s.timezone);
 const todayOf = (d: AppData) => todayIn(tzNow(d.settings));
 
 const channel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("lifeos") : null;
+const announce = () => channel?.postMessage("changed");
 
 let writes: Promise<unknown> = Promise.resolve();
+/** The browser copy first, so the app stays instant, then the file. Demo data never reaches the file. */
 const save = (mode: Mode, data: AppData) => {
   writes = writes.then(async () => {
     const ok = await storage.write(KEY[mode], data);
-    if (ok) channel?.postMessage("changed");
-    else toast.error("Could not save. Export your data before closing this tab.");
+    if (ok) announce();
+    else if (mode === "demo") toast.error("Could not save the demo.");
   });
+  if (mode === "real") pushToFile(data);
+};
+
+const hasData = (d: AppData | undefined) => !!(d?.settings.onboarded || d?.logs.length);
+
+/** The real account: the file when it can be reached, otherwise this browser's copy. */
+const loadReal = async () => {
+  const local = migrate(await storage.read(KEY.real)) as AppData | undefined;
+  const { data, notice } = await reconcile(local, hasData(local));
+  if (notice) toast(notice);
+  return data;
 };
 
 export const useStore = create<State>()((set, get) => {
@@ -132,12 +146,12 @@ export const useStore = create<State>()((set, get) => {
     hydrate: async () => {
       const mode = (await storage.read<Mode>(MODE_KEY)) === "demo" ? "demo" : "real";
       const today = todayIn(deviceTimezone());
-      const saved = migrate(await storage.read(KEY[mode])) as AppData | undefined;
+      const saved = mode === "real" ? await loadReal() : (migrate(await storage.read(KEY.demo)) as AppData | undefined);
       // Setup that was never finished holds nothing worth keeping, so it starts over.
-      const stored = saved?.settings.onboarded || saved?.logs.length ? saved : undefined;
+      const stored = hasData(saved) ? saved : undefined;
       const data = stored ?? (mode === "demo" ? createDemoData(today) : freshData(today));
       set({ hydrated: true, mode, data, celebrate: false });
-      if (stored) save(mode, stored);
+      if (stored && mode === "demo") save(mode, stored);
       if (navigator.storage?.persist) navigator.storage.persist().catch(() => undefined);
     },
 
@@ -152,8 +166,8 @@ export const useStore = create<State>()((set, get) => {
     exitDemo: () => {
       void storage.write(MODE_KEY, "real");
       void storage.remove(KEY.demo);
-      storage.read(KEY.real).then((stored) => {
-        set({ mode: "real", data: (migrate(stored) as AppData | undefined) ?? freshData(todayIn(deviceTimezone())), celebrate: false });
+      loadReal().then((stored) => {
+        set({ mode: "real", data: hasData(stored) ? stored! : freshData(todayIn(deviceTimezone())), celebrate: false });
       });
     },
 
@@ -339,8 +353,21 @@ export const timerElapsedMs = (t: Timer, now = Date.now()) => t.bankedMs + (t.pa
 // Another tab saved: pick up its data rather than overwriting it later.
 channel?.addEventListener("message", () => {
   const { mode } = useStore.getState();
+  void rereadRevision();
   storage.read(KEY[mode]).then((data) => {
     if (data) useStore.setState({ data: migrate(data) as AppData, celebrate: false });
   });
+});
+
+connectFile({
+  current: () => {
+    const { mode, data, hydrated } = useStore.getState();
+    return hydrated && mode === "real" ? data : null;
+  },
+  apply: (data) => {
+    useStore.setState({ data, celebrate: false });
+    void storage.write(KEY.real, data);
+  },
+  announce,
 });
 

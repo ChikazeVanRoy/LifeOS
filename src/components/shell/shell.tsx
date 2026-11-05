@@ -11,6 +11,7 @@ import { TimerPill } from "@/components/log/timer-pill";
 import { Onboarding } from "@/components/onboarding";
 import { FlameIcon, Ring } from "@/components/viz/primitives";
 import { useAnkiAutoSync } from "@/lib/anki-sync";
+import { useFileSync } from "@/lib/file-sync";
 import { useStore } from "@/lib/store";
 import { useUI } from "@/lib/ui";
 import { cn, plural } from "@/lib/utils";
@@ -169,6 +170,7 @@ export function Shell({ children }: { children: ReactNode }) {
   const path = usePathname();
   useShortcuts();
   useAnkiAutoSync();
+  useFileSync();
 
   if (!hydrated) {
     return (

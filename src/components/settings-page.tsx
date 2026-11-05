@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Download, FlaskConical, Pencil, Plus, Trash2, Upload } from "lucide-react";
+import { ArrowDown, ArrowUp, Download, FlaskConical, FolderOpen, Pencil, Plus, Trash2, Upload } from "lucide-react";
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { AnkiPanel } from "@/components/anki-panel";
@@ -14,8 +14,10 @@ import { GoalBadge, PageHeader } from "@/components/viz/primitives";
 import { createGoal, nextColor } from "@/lib/defaults";
 import { deviceTimezone, fmtFull } from "@/lib/engine/dates";
 import { describeSchedule } from "@/lib/engine/streaks";
+import { revealFile } from "@/lib/file-sync";
 import { parseImport, toExport } from "@/lib/io";
 import { useStore } from "@/lib/store";
+import { useUI } from "@/lib/ui";
 import type { AppData, Goal, ThemePref, WeightUnit } from "@/lib/types";
 import { cn, fmtNum, plural } from "@/lib/utils";
 
@@ -46,6 +48,27 @@ function Segmented<T extends string | number>({ value, options, onChange, label 
         <button key={String(o.value)} role="radio" aria-checked={value === o.value} onClick={() => onChange(o.value)} className={cn("h-8 rounded-[10px] px-3 text-[13px] transition-colors", value === o.value ? "bg-card font-medium shadow-sm" : "text-muted-foreground")}>{o.label}</button>
       ))}
     </div>
+  );
+}
+
+function DataFileRow() {
+  const mode = useStore((s) => s.mode);
+  const status = useUI((s) => s.fileStatus);
+  if (mode === "demo") return <Row label="Data file" hint="Demo data isn't saved to your file."><span className="text-xs text-muted-foreground">Demo</span></Row>;
+  const state =
+    status.state === "browser"
+      ? "Can't reach the file right now. Changes are safe in this browser and will be saved when it's back."
+      : status.state === "checking"
+        ? "Checking…"
+        : status.state === "saving"
+          ? "Saving…"
+          : status.savedAt
+            ? `Saved ${new Date(status.savedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}${status.backups ? ` · ${plural(status.backups, "backup")}` : ""}`
+            : "Nothing saved yet. It starts with your first change.";
+  return (
+    <Row label="Data file" hint={state}>
+      <Button variant="secondary" size="sm" onClick={revealFile}><FolderOpen /> Show in Finder</Button>
+    </Row>
   );
 }
 
@@ -175,7 +198,8 @@ export function SettingsPage() {
           <Rests />
         </Group>
 
-        <Group title="Your data" description="Stored only in this browser. Export regularly, as clearing site data deletes it.">
+        <Group title="Your data" description="Saved automatically to a file on this Mac. The browser only keeps a working copy.">
+          <DataFileRow />
           <Row label="Export" hint={`${plural(data.logs.length, "activity", "activities")} as JSON`}>
             <Button variant="secondary" size="sm" onClick={exportData}><Download /> Export</Button>
           </Row>
@@ -190,7 +214,7 @@ export function SettingsPage() {
               <Button variant="secondary" size="sm" onClick={enterDemo}><FlaskConical /> Open demo</Button>
             )}
           </Row>
-          <Row label="Reset" hint="Delete all activity and start again">
+          <Row label="Reset" hint="Delete all activity and start again. A safety copy is kept in your backups.">
             <Button variant="destructive" size="sm" onClick={() => setConfirmReset(true)}>Reset</Button>
           </Row>
         </Group>
@@ -232,7 +256,7 @@ export function SettingsPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete everything?</AlertDialogTitle>
-            <AlertDialogDescription>All activity, goals and settings will be removed from this browser. This cannot be undone unless you have an export.</AlertDialogDescription>
+            <AlertDialogDescription>All activity, goals and settings will be removed. A safety copy stays in your backups folder.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Keep my data</AlertDialogCancel>

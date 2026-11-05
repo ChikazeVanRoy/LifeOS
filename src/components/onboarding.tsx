@@ -226,7 +226,7 @@ export function Onboarding() {
         <Choice<0 | 1> label="Weeks start on" value={weekStartsOn} onChange={setWeekStartsOn} options={[{ value: 1, label: "Monday" }, { value: 0, label: "Sunday" }]} />
         <Choice<WeightUnit> label="Weights in" value={weightUnit} onChange={setWeightUnit} options={[{ value: "kg", label: "kg" }, { value: "lb", label: "lb" }]} />
       </div>
-      <p className="mt-3 text-center text-xs text-muted-foreground">Times follow {deviceTimezone()}. Your data stays in this browser.</p>
+      <p className="mt-3 text-center text-xs text-muted-foreground">Times follow {deviceTimezone()}. Your data is saved to a file on this Mac.</p>
     </div>,
   ];
 
