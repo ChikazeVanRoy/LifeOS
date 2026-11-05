@@ -6,6 +6,14 @@ Every number on screen is computed from what you logged. Nothing is hardcoded, a
 
 ## Run it
 
+Double-click **`LifeOS.command`** in Finder. It installs what it needs, builds the app when the code has changed, starts it at http://localhost:3000 and opens your browser. It runs for as long as the Terminal window stays open, so close the window to stop it, or use **`Stop LifeOS.command`**.
+
+The first double-click gives the launcher its icon and hides its `.command` extension (Git can't store either, so it sets them on itself). Drag it to the right-hand side of the Dock for one-click launching. If macOS says it can't be opened, right-click it and choose **Open** once. Its log is `.lifeos/server.log`.
+
+Keep the address the same: your data lives in the browser under `localhost:3000`, so a different port would show an empty account.
+
+For development:
+
 ```bash
 npm install
 npm run dev
