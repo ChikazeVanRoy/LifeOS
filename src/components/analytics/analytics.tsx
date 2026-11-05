@@ -258,8 +258,9 @@ export function Analytics() {
   const w = useWindows(g, d);
   const now = totalsOf(inRange(d.logs, w.from, d.today));
   const prev = totalsOf(inRange(d.logs, w.prevFrom, w.prevTo));
-  const xpNow = d.xpEvents.filter((e) => e.date >= w.from).reduce((s, e) => s + e.amount, 0);
-  const xpPrev = d.xpEvents.filter((e) => e.date >= w.prevFrom && e.date <= w.prevTo).reduce((s, e) => s + e.amount, 0);
+  const unlocked = d.achievements.flatMap((a) => (a.unlockedOn ? [a.unlockedOn] : []));
+  const achievedNow = unlocked.filter((date) => date >= w.from).length;
+  const achievedPrev = unlocked.filter((date) => date >= w.prevFrom && date <= w.prevTo).length;
 
   const activity = useMemo(() => {
     const series: Series[] = d.allGoals.filter((v) => v.totals.minutes > 0 || !v.goal.archived).map((v) => ({ key: v.goal.id, label: v.goal.name, color: `var(--c-${v.goal.color})` }));
@@ -294,7 +295,7 @@ export function Analytics() {
           <Kpi label="Hours" value={fmtHours(now.minutes)} now={now.minutes} before={prev.minutes} />
           <Kpi label="Sessions" value={fmtNum(now.sessions)} now={now.sessions} before={prev.sessions} />
           <Kpi label="Active days" value={fmtNum(now.activeDays)} now={now.activeDays} before={prev.activeDays} />
-          <Kpi label="XP earned" value={fmtCompact(xpNow)} now={xpNow} before={xpPrev} />
+          <Kpi label="Achievements" value={fmtNum(achievedNow)} now={achievedNow} before={achievedPrev} />
         </div>
         <p className="-mt-2 px-1 text-xs text-muted-foreground">Arrows compare the {w.scope} with {w.prevScope}.</p>
 

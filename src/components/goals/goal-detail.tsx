@@ -87,7 +87,7 @@ export function GoalDetail() {
     );
   }
 
-  const { goal, streak, totals, level, records } = view;
+  const { goal, streak, totals, week, records } = view;
   const unitWord = streak.unit;
 
   const restToday = () => {
@@ -112,14 +112,13 @@ export function GoalDetail() {
       <header className="card relative overflow-hidden p-5 md:p-6">
         <div aria-hidden className="pointer-events-none absolute -top-24 -right-16 size-64 rounded-full opacity-[0.16] blur-3xl" style={{ background: "var(--goal)" }} />
         <div className="relative flex flex-wrap items-center gap-4">
-          <Ring value={level.progress} size={88} stroke={7} label={`Level ${level.level}`}>
-            <span className="eyebrow !text-[8.5px]">Level</span>
-            <span className="font-display num -mt-0.5 text-3xl leading-none font-medium">{level.level}</span>
+          <Ring value={week.required ? week.done / week.required : 0} size={88} stroke={7} label={`${week.done} of ${week.required} this week`}>
+            <span className="eyebrow !text-[8.5px]">Week</span>
+            <span className="font-display num -mt-0.5 text-2xl leading-none font-medium">{week.done}<span className="text-muted-foreground">/{week.required}</span></span>
           </Ring>
           <div className="min-w-0 flex-1">
             <h1 className="font-display flex items-center gap-2.5 text-3xl font-medium"><GoalBadge icon={goal.icon} color={goal.color} size={32} /> {goal.name}</h1>
             <p className="mt-1 text-sm text-muted-foreground">{goal.description ?? describeSchedule(view.schedule)}</p>
-            <p className="num mt-0.5 text-xs text-muted-foreground">{fmtNum(view.xp)} XP · {fmtNum(level.toNext)} to level {level.level + 1}</p>
           </div>
           <div className="flex w-full items-center gap-2 sm:w-auto">
             <Button className="flex-1 sm:flex-none" onClick={() => openLog({ goalId: goal.id })}><Plus /> Log</Button>

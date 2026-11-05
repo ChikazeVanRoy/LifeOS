@@ -1,7 +1,7 @@
 import type { Goal, ISODate, LogEntry } from "../types";
 import { addDays, addMonths, endOfMonth, fmtMonth, fmtMonthYear, fmtShort, startOfMonth, startOfWeek } from "./dates";
 
-/** Size of a session for XP and heatmaps. Estimates here never reach reported hours. */
+/** Size of a session for heatmaps and minimum lengths. Estimates here never reach reported hours. */
 export const effortMinutes = (log: LogEntry, goal: Goal): number => {
   if (log.minutes > 0) return log.minutes;
   const fromMetrics = goal.metrics.reduce((sum, m) => sum + (log.metrics[m.id] ?? 0) * (m.minutesPer ?? 0), 0);

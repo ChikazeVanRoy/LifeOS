@@ -38,8 +38,6 @@ describe("a real account", () => {
 
   it("starts with nothing recorded", () => {
     const d = derive(fresh(), now);
-    expect(d.xp).toBe(0);
-    expect(d.level.level).toBe(1);
     expect(d.totals.sessions).toBe(0);
     expect(d.overallStreak.current).toBe(0);
     expect(d.achievements.filter((a) => a.unlockedOn)).toEqual([]);
@@ -49,14 +47,12 @@ describe("a real account", () => {
 });
 
 describe("derived state follows the log", () => {
-  it("grants XP and achievements, then removes them when the log is deleted", () => {
+  it("grants achievements, then removes them when the log is deleted", () => {
     const d = fresh();
     d.logs.push(log("writing", today, 45, { words: 650 }));
-    expect(derive(d, now).xp).toBeGreaterThan(0);
     expect(unlocked(d)).toContain("writing:first");
     expect(unlocked(d)).toContain("life:day-one");
     d.logs = [];
-    expect(derive(d, now).xp).toBe(0);
     expect(unlocked(d)).toEqual([]);
   });
 
@@ -101,7 +97,6 @@ describe("derived state follows the log", () => {
     const d = fresh();
     d.projects.push({ id: "p", goalId: "writing", kind: "project", title: "Album", finishedAt: "2026-02-01" });
     expect(unlocked(d)).toContain("writing:project-1");
-    expect(derive(d, now).xpEvents.some((e) => e.source === "project" && e.amount === 500)).toBe(true);
   });
 
   it("tracks body weight towards a target in either direction", () => {
@@ -142,16 +137,6 @@ describe("derived state follows the log", () => {
     const v = derive(d, now);
     expect(v.totals.minutes).toBe(0);
     expect(v.byId.get("reading")?.totals.metrics.pages).toBe(25);
-    expect(v.byId.get("reading")?.xp).toBeGreaterThan(0);
-  });
-
-  it("awards a weekly target bonus once the target is hit", () => {
-    const d = fresh();
-    const week = ["2026-03-02", "2026-03-03"];
-    week.forEach((date) => d.logs.push(log("fitness", date, 60)));
-    expect(derive(d, now).xpEvents.some((e) => e.source === "weekly")).toBe(false);
-    d.logs.push(log("fitness", today, 60));
-    expect(derive(d, now).xpEvents.filter((e) => e.source === "weekly" && e.goalId === "fitness").length).toBe(1);
   });
 });
 
@@ -162,11 +147,15 @@ describe("demo data", () => {
 
   it("exercises every system", () => {
     expect(d.totals.sessions).toBeGreaterThan(500);
-    expect(d.level.level).toBeGreaterThan(5);
     expect(d.achievements.filter((a) => a.unlockedOn).length).toBeGreaterThan(10);
     expect(d.byId.get("fitness")?.strength?.prs.length).toBeGreaterThan(3);
     expect(buildInsights(d).length).toBeGreaterThan(0);
     expect(d.logs.every((l) => l.date <= today)).toBe(true);
+  });
+
+  it("gives every sample project its own id", () => {
+    const ids = demo.projects.map((p) => p.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   it("reviews a past week", () => {
@@ -230,13 +219,17 @@ describe("data saved by the previous version", () => {
     d.goals.push({ ...createGoal("language", "2026-01-01", { id: "portuguese", name: "Portuguese" }) });
     d.projects.push({ id: "m", goalId: "writing", kind: "manuscript", title: "My Novel", target: 80000 });
     delete d.settings.weightUnit;
+    d.settings.dailyXpCap = 150;
+    d.goals[0].metrics = [{ id: "words", label: "Words", unit: "words", xp: { per: 50, cap: 40 } }];
     return d;
   };
 
   it("keeps names and history while upgrading the structure", () => {
     const d = migrate(oldData()) as AppData;
-    expect(d.version).toBe(3);
+    expect(d.version).toBe(4);
     expect(d.anki).toBeNull();
+    expect(d.settings).not.toHaveProperty("dailyXpCap");
+    expect(JSON.stringify(d.goals)).not.toContain('"xp"');
     expect(d.goals[0]).toMatchObject({ name: "Writing", kind: "creative" });
     expect(d.goals.some((g) => g.name === "Portuguese")).toBe(true);
     expect(d.projects[0].kind).toBe("project");

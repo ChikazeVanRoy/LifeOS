@@ -1,6 +1,6 @@
 # LifeOS
 
-A gamified personal growth tracker. Log what you do, and LifeOS turns it into streaks, levels, charts and a record of how far you've come.
+A gamified personal growth tracker. Log what you do, and LifeOS turns it into streaks, achievements, charts and a record of how far you've come.
 
 Every number on screen is computed from what you logged. Nothing is hardcoded, and a new account starts at zero.
 
@@ -22,7 +22,7 @@ npm run dev
 Then open http://localhost:3000. For the production build, use `npm run build && npm start`.
 
 ```bash
-npm test        # Tests for streaks, XP, parsing, reviews, imports, migrations and backups
+npm test        # Tests for streaks, parsing, reviews, imports, migrations and backups
 npm run lint
 ```
 
@@ -51,14 +51,13 @@ Demo mode stores sample data under a separate key, so it never touches your real
 | --- | --- |
 | `dates.ts` | Calendar maths on day numbers, safe across timezones and daylight saving |
 | `streaks.ts` | Daily, specific-day and weekly streaks, rest periods, schedule history |
-| `xp.ts` | XP rules, diminishing returns, daily caps, level curves |
 | `achievements.ts` | Achievement definitions and when each was earned |
 | `records.ts` | Personal records and strength progress |
 | `insights.ts`, `review.ts` | Rule-based insights and the weekly review |
 | `parse.ts` | The quick-log sentence parser, which runs locally |
 | `derive.ts` | Combines all of the above into one snapshot for the UI |
 
-XP, levels, streaks and achievements are never stored. They are recomputed from saved activity, so editing or deleting an entry corrects everything, including backdated changes.
+Streaks and achievements are never stored. They are recomputed from saved activity, so editing or deleting an entry corrects everything, including backdated changes.
 
 A few decisions worth knowing:
 
@@ -68,7 +67,7 @@ A few decisions worth knowing:
 - An unfinished day or week is pending, never a miss.
 - First day of the week, weight unit, and date, time and number formats follow the browser's locale. The first two can be changed in Settings.
 - Saved data carries a version. `src/lib/migrate.ts` upgrades older data and backups when they load.
-- Sessions with no duration get an estimate for XP only. Estimates never count towards reported hours.
+- Sessions with no duration get an estimate for heatmaps only. Estimates never count towards reported hours.
 
 ## Stack
 

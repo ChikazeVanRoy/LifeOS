@@ -133,7 +133,7 @@ export function SettingsPage() {
           <Row label="Theme">
             <Segmented<ThemePref> label="Theme" value={settings.theme} onChange={(theme) => setSettings({ theme })} options={[{ value: "system", label: "Auto" }, { value: "light", label: "Light" }, { value: "dark", label: "Dark" }]} />
           </Row>
-          <Row label="Celebrations" hint="Level-up and achievement animations">
+          <Row label="Celebrations" hint="Streak and achievement animations">
             <Switch aria-label="Celebrations" checked={settings.celebrations} onCheckedChange={(celebrations) => setSettings({ celebrations })} />
           </Row>
         </Group>
@@ -169,12 +169,6 @@ export function SettingsPage() {
           <div className="py-3">
             <Button variant="secondary" size="sm" onClick={() => setEditing({ goal: createGoal("custom", d.today, { order: d.allGoals.length, color: nextColor(d.allGoals.map((g) => g.goal)) }), isNew: true })}><Plus /> New goal</Button>
           </div>
-        </Group>
-
-        <Group title="XP" description="For motivation only.">
-          <Row label="Daily XP cap per goal" hint="Most XP one goal can earn from sessions in a day">
-            <Input aria-label="Daily XP cap" inputMode="numeric" value={settings.dailyXpCap} onChange={(e) => setSettings({ dailyXpCap: Math.max(10, Number(e.target.value) || 10) })} className="num h-9 w-20 rounded-xl text-right" />
-          </Row>
         </Group>
 
         <Group title="Rest" description="Planned breaks never break a streak. Weekly targets shrink to fit.">

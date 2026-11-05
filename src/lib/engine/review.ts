@@ -22,7 +22,6 @@ export interface WeekReview {
   isCurrent: boolean;
   totals: Totals;
   previous: Totals;
-  xp: number;
   goals: GoalWeek[];
   streaksKept: GoalWeek[];
   records: (RecordEvent & { goal: Goal })[];
@@ -75,7 +74,6 @@ export const buildReview = (d: Derived, anyDayInWeek: ISODate): WeekReview => {
   const strengthPRs = d.goals.flatMap((g) => (g.strength?.prs ?? []).filter((p) => within(p.date)).map((p) => ({ ...p, goal: g.goal })));
   const achievements = d.achievements.filter((a) => within(a.unlockedOn));
   const milestones = d.milestones.filter((m) => within(m.completedOn));
-  const xp = d.xpEvents.filter((e) => within(e.date)).reduce((s, e) => s + e.amount, 0);
 
   // Mid-week, it is too early to call a goal neglected.
   const quieter = isCurrent && elapsed < 5 ? [] : goals.filter((g) => {
@@ -118,5 +116,5 @@ export const buildReview = (d: Derived, anyDayInWeek: ISODate): WeekReview => {
   }
   if (priorities.length === 0) priorities.push({ goalId: null, text: "Pick one goal that matters most next week and give it the first hour." });
 
-  return { start, end, isCurrent, totals, previous, xp, goals, streaksKept, records, strengthPRs, achievements, milestones, quieter, headline, note, compareLabel: isCurrent ? "this point last week" : "last week", priorities: priorities.slice(0, 3) };
+  return { start, end, isCurrent, totals, previous, goals, streaksKept, records, strengthPRs, achievements, milestones, quieter, headline, note, compareLabel: isCurrent ? "this point last week" : "last week", priorities: priorities.slice(0, 3) };
 };

@@ -140,7 +140,7 @@ const specsFor = (goal: Goal): Spec[] => {
   switch (goal.kind) {
     case "creative": {
       const words = goal.metrics.some((m) => m.id === "words");
-      const units = goal.metrics.find((m) => m.id !== "words" && m.xp);
+      const units = goal.metrics.find((m) => m.id === "chapters" || m.id === "pieces");
       const singular = units?.label.replace(/s$/, "");
       return [
         first("First Creative Session", "Log your first creative session"),

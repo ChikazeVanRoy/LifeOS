@@ -1,7 +1,7 @@
 "use client";
 
-import { ChevronDown, Lock } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { Lock } from "lucide-react";
+import { motion } from "motion/react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { chipClass } from "@/components/log/log-sheet";
@@ -10,9 +10,7 @@ import { Icon } from "@/components/viz/icons";
 import { AnimatedNumber, Bar, Empty, goalVar, GoalBadge, PageHeader, Ring, SectionTitle } from "@/components/viz/primitives";
 import { fmtFull, fmtRelative } from "@/lib/engine/dates";
 import type { AchievementState, Tier } from "@/lib/engine/achievements";
-import { lifeTitle, XP_RULES } from "@/lib/engine/xp";
-import { useStore } from "@/lib/store";
-import { cn, fmtCompact, fmtDuration, fmtNum } from "@/lib/utils";
+import { cn, fmtCompact, fmtDuration, fmtHours, fmtNum } from "@/lib/utils";
 
 const TIER: Record<Tier, { label: string; ring: string; rank: number }> = {
   bronze: { label: "Bronze", ring: "conic-gradient(from 210deg, #c08457, #e7b98d, #9d6238, #c08457)", rank: 1 },
@@ -45,33 +43,6 @@ function Medal({ a, goalColor, goalName, today }: { a: AchievementState; goalCol
   );
 }
 
-function HowXp() {
-  const [open, setOpen] = useState(false);
-  const cap = useStore((s) => s.data.settings.dailyXpCap);
-  const items = [
-    `A session earns ${XP_RULES.sessionBase[0]} XP plus 1 XP a minute for the first 30 minutes of the day. Later minutes earn less, and nothing after two hours.`,
-    "Measurable output, such as pages read or words written, adds a little, up to a daily limit.",
-    `Each goal can earn up to ${cap} XP a day from sessions, so logging lots of tiny entries gains very little.`,
-    `Hitting a weekly target earns ${XP_RULES.weeklyTarget} XP. Every 7 days of a streak earns ${XP_RULES.streakEvery7Days} XP, and each week of a weekly streak earns ${XP_RULES.streakPerWeek} XP.`,
-    `Milestones earn ${XP_RULES.milestone} XP. A finished creative project earns ${XP_RULES.project.project} XP.`,
-    "XP is for motivation. It is not a measure of proficiency, and every point can be traced to something you logged.",
-  ];
-  return (
-    <div className="card overflow-hidden">
-      <button aria-expanded={open} onClick={() => setOpen(!open)} className="flex w-full items-center justify-between p-4 text-sm font-medium">
-        How XP works <ChevronDown size={16} className={cn("transition-transform", open && "rotate-180")} />
-      </button>
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.ul initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden px-4 text-sm text-muted-foreground">
-            <div className="space-y-2 pb-4">{items.map((t) => <li key={t} className="ml-4 list-disc">{t}</li>)}</div>
-          </motion.ul>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
 export function AchievementsPage() {
   const d = useDerived();
   const [filter, setFilter] = useState<"all" | "unlocked" | "locked">("all");
@@ -89,7 +60,6 @@ export function AchievementsPage() {
     [d.achievements, filter, goal],
   );
   const unlocked = d.achievements.filter((a) => a.unlockedOn).length;
-  const events = [...d.xpEvents].reverse().slice(0, 12);
   const prs = d.goals.flatMap((g) => (g.strength?.exercises ?? []).map((e) => ({ goal: g.goal, e })));
   const records = d.goals.flatMap((g) => g.records.filter((r) => r.label === "Longest session" || r.label.startsWith("Most")).map((r) => ({ ...r, goal: g.goal })));
 
@@ -99,35 +69,36 @@ export function AchievementsPage() {
 
       <section className="card grid gap-6 p-5 md:grid-cols-[auto_1fr] md:p-6">
         <div className="flex items-center gap-4 md:flex-col md:px-3 md:text-center">
-          <Ring value={d.level.progress} size={128} stroke={10} gradient label={`Life level ${d.level.level}`}>
-            <span className="eyebrow !text-[9px]">Life level</span>
-            <AnimatedNumber value={d.level.level} className="font-display text-[46px] leading-none font-medium" />
+          <Ring value={d.achievements.length ? unlocked / d.achievements.length : 0} size={128} stroke={10} gradient label={`${unlocked} of ${d.achievements.length} unlocked`}>
+            <span className="eyebrow !text-[9px]">Unlocked</span>
+            <AnimatedNumber value={unlocked} className="font-display text-[46px] leading-none font-medium" />
           </Ring>
           <div>
-            <p className="text-[15px] font-medium">{lifeTitle(d.level.level)}</p>
-            <p className="num text-sm text-muted-foreground">{fmtNum(d.xp)} XP</p>
-            <p className="num text-xs text-muted-foreground">{fmtNum(d.level.toNext)} to next</p>
+            <p className="text-[15px] font-medium">of {d.achievements.length}</p>
+            <p className="num text-sm text-muted-foreground">{fmtHours(d.totals.minutes)} invested</p>
           </div>
         </div>
         <div className="grid content-center gap-x-8 gap-y-3.5 sm:grid-cols-2">
-          {[...d.goals].sort((a, b) => b.xp - a.xp).map((g) => (
-            <Link key={g.goal.id} href={`/goals/${g.goal.id}`} className="block" style={goalVar(g.goal.color)}>
-              <div className="flex items-center gap-2.5">
-                <GoalBadge icon={g.goal.icon} color={g.goal.color} size={30} />
-                <div className="min-w-0 flex-1">
-                  <p className="flex items-baseline justify-between gap-2 text-sm">
-                    <span className="truncate">{g.goal.name}</span>
-                    <span className="num shrink-0 text-xs text-muted-foreground">Lv {g.level.level} · {fmtCompact(g.xp)} XP</span>
-                  </p>
-                  <Bar value={g.level.progress} height={4} className="mt-1.5" />
+          {d.goals.map((g) => {
+            const own = d.achievements.filter((a) => a.goalId === g.goal.id);
+            const done = own.filter((a) => a.unlockedOn).length;
+            return (
+              <Link key={g.goal.id} href={`/goals/${g.goal.id}`} className="block" style={goalVar(g.goal.color)}>
+                <div className="flex items-center gap-2.5">
+                  <GoalBadge icon={g.goal.icon} color={g.goal.color} size={30} />
+                  <div className="min-w-0 flex-1">
+                    <p className="flex items-baseline justify-between gap-2 text-sm">
+                      <span className="truncate">{g.goal.name}</span>
+                      <span className="num shrink-0 text-xs text-muted-foreground">{done} of {own.length}</span>
+                    </p>
+                    <Bar value={own.length ? done / own.length : 0} height={4} className="mt-1.5" />
+                  </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       </section>
-
-      <HowXp />
 
       <section>
         <SectionTitle title="Gallery" />
@@ -150,7 +121,7 @@ export function AchievementsPage() {
         )}
       </section>
 
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-5 md:grid-cols-2">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-5">
         <section className="card p-5">
           <h3 className="mb-3 text-[15px] font-medium">Personal records</h3>
           {records.length + prs.length === 0 ? (
@@ -167,22 +138,6 @@ export function AchievementsPage() {
                 <li key={r.id} className="flex items-baseline justify-between gap-3">
                   <span className="flex min-w-0 items-center gap-2 text-muted-foreground"><span className="size-2 shrink-0 rounded-full" style={{ background: `var(--c-${r.goal.color})` }} /><span className="truncate">{r.goal.name}: {r.label.toLowerCase()}</span></span>
                   <span className="num shrink-0 font-medium">{r.unit === "min" ? fmtDuration(r.value) : `${fmtNum(r.value)} ${r.unit}`}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <section className="card p-5">
-          <h3 className="mb-3 text-[15px] font-medium">Recent XP</h3>
-          {events.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Every point you earn is itemised here.</p>
-          ) : (
-            <ul className="space-y-2.5 text-sm">
-              {events.map((e, i) => (
-                <li key={i} className="flex items-baseline justify-between gap-3">
-                  <span className="truncate text-muted-foreground">{e.label}</span>
-                  <span className="num shrink-0 font-medium">+{e.amount} <span className="ml-1 text-xs font-normal text-muted-foreground">{fmtRelative(e.date, d.today)}</span></span>
                 </li>
               ))}
             </ul>

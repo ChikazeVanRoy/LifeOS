@@ -9,12 +9,11 @@ import { Celebrations } from "@/components/log/celebrations";
 import { LogSheet } from "@/components/log/log-sheet";
 import { TimerPill } from "@/components/log/timer-pill";
 import { Onboarding } from "@/components/onboarding";
-import { Ring } from "@/components/viz/primitives";
+import { FlameIcon, Ring } from "@/components/viz/primitives";
 import { useAnkiAutoSync } from "@/lib/anki-sync";
-import { lifeTitle } from "@/lib/engine/xp";
 import { useStore } from "@/lib/store";
 import { useUI } from "@/lib/ui";
-import { cn, fmtNum } from "@/lib/utils";
+import { cn, plural } from "@/lib/utils";
 import { useDerived } from "./providers";
 
 const NAV = [
@@ -81,12 +80,10 @@ function Sidebar() {
         </Link>
       </nav>
       <Link href="/achievements" className="mt-auto flex items-center gap-3 rounded-2xl p-2 transition-colors hover:bg-secondary">
-        <Ring value={d.level.progress} size={44} stroke={5} gradient>
-          <span className="num text-[13px] font-semibold">{d.level.level}</span>
-        </Ring>
+        <span className="grid size-11 place-items-center"><FlameIcon size={30} lit={d.overallStreak.current > 0} /></span>
         <span className="min-w-0">
-          <span className="block truncate text-sm font-medium">{lifeTitle(d.level.level)}</span>
-          <span className="num block text-xs text-muted-foreground">{fmtNum(d.xp)} XP</span>
+          <span className="num block truncate text-sm font-medium">{plural(d.overallStreak.current, "day")}</span>
+          <span className="block text-xs text-muted-foreground">Life streak</span>
         </span>
       </Link>
     </aside>

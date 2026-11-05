@@ -165,7 +165,7 @@ describe("imported activity in the app", () => {
     return d;
   };
 
-  it("counts towards hours, streaks and XP", () => {
+  it("counts towards hours and streaks", () => {
     const d = data();
     const r = importAnki({ feed: feedOf(row("2026-03-03", "portuguese", 80, 600), row(today, "portuguese", 40, 300)), mapping, goals: d.goals, logs: [], today, tz: "UTC", now: 1 });
     d.logs = r.logs;
@@ -175,7 +175,6 @@ describe("imported activity in the app", () => {
     expect(goal?.totals.minutes).toBe(15);
     expect(goal?.totals.metrics.reviews).toBe(120);
     expect(goal?.streak.current).toBe(2);
-    expect(goal?.xp).toBeGreaterThan(0);
   });
 
   it("survives a backup and restore", () => {

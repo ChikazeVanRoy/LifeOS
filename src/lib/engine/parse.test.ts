@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createDefaultGoals, createGoal } from "../defaults";
 import { parseLogText } from "./parse";
-import { sessionXp, levelFrom, timeCurve, xpForLevel } from "./xp";
 
 const today = "2026-03-04"; // a Wednesday
 const goals = [
@@ -68,40 +67,5 @@ describe("quick-log sentences", () => {
 
   it("leaves unknown text unmatched", () => {
     expect(parse("had a nice lunch").goalId).toBeNull();
-  });
-});
-
-describe("xp", () => {
-  const writing = g("Writing");
-  const log = (id: string, minutes: number, date = today, metrics: Record<string, number> = {}) => ({
-    id, goalId: writing.id, typeId: null, date, time: null, tz: "UTC", minutes, metrics, createdAt: 0, updatedAt: 0,
-  });
-
-  it("has diminishing returns over a day", () => {
-    expect(timeCurve(30)).toBe(30);
-    expect(timeCurve(60)).toBe(48);
-    expect(timeCurve(120)).toBe(66);
-    expect(timeCurve(600)).toBe(66);
-  });
-
-  it("makes many tiny sessions worth little more than one real one", () => {
-    const spam = Array.from({ length: 50 }, (_, i) => log(`s${i}`, 1));
-    const spamTotal = [...sessionXp(writing, spam, 150).byLog.values()].reduce((a, b) => a + b, 0);
-    const focused = [...sessionXp(writing, [log("one", 50)], 150).byLog.values()].reduce((a, b) => a + b, 0);
-    expect(spamTotal).toBeLessThan(focused + 15);
-  });
-
-  it("enforces the daily cap and resets it the next day", () => {
-    const huge = [log("a", 600, today, { words: 100000 }), log("b", 60, "2026-03-05")];
-    const { byLog } = sessionXp(writing, huge, 100);
-    expect(byLog.get("a")).toBe(100);
-    expect(byLog.get("b")).toBeGreaterThan(0);
-  });
-
-  it("is continuous at level boundaries", () => {
-    expect(levelFrom(0, 50).level).toBe(1);
-    expect(levelFrom(xpForLevel(5, 50) - 1, 50).level).toBe(4);
-    expect(levelFrom(xpForLevel(5, 50), 50).level).toBe(5);
-    expect(levelFrom(xpForLevel(5, 50), 50).into).toBe(0);
   });
 });

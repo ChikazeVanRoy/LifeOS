@@ -7,7 +7,7 @@ import type { GoalView } from "@/lib/engine/derive";
 import { fmtWeekday } from "@/lib/engine/dates";
 import { useUI } from "@/lib/ui";
 import { cn, fmtHours } from "@/lib/utils";
-import { Bar, goalVar, GoalBadge, Ring, StreakPill, WEEK_DOT } from "./viz/primitives";
+import { goalVar, GoalBadge, Ring, StreakPill, WEEK_DOT } from "./viz/primitives";
 
 export function WeekDots({ view, today }: { view: GoalView; today: string }) {
   return (
@@ -40,7 +40,7 @@ export const weekLabel = (v: GoalView) => {
 };
 
 export function GoalCard({ view, today }: { view: GoalView; today: string }) {
-  const { goal, level, streak, totals } = view;
+  const { goal, streak, totals } = view;
   const openLog = useUI((s) => s.openLog);
   const ratio = view.week.required ? view.week.done / view.week.required : 0;
 
@@ -53,7 +53,7 @@ export function GoalCard({ view, today }: { view: GoalView; today: string }) {
         </Ring>
         <div className="min-w-0 flex-1">
           <p className="truncate text-[15px] font-medium">{goal.name}</p>
-          <p className="num text-xs text-muted-foreground">Level {level.level} · {fmtHours(totals.minutes)}</p>
+          <p className="num text-xs text-muted-foreground">{fmtHours(totals.minutes)} invested</p>
         </div>
         <button
           aria-label={`Log ${goal.name}`}
@@ -70,7 +70,6 @@ export function GoalCard({ view, today }: { view: GoalView; today: string }) {
         <StreakPill current={streak.current} unit={streak.unit} />
         <span className="num truncate text-xs text-muted-foreground">{weekLabel(view)}</span>
       </div>
-      <Bar value={level.progress} height={3} className="pointer-events-none relative z-10 opacity-80" />
     </motion.div>
   );
 }

@@ -106,7 +106,7 @@ export function Onboarding() {
         See how far<br />you&apos;ve <span className="aurora-text">come.</span>
       </h1>
       <p className="mx-auto mt-4 max-w-sm text-[15px] text-muted-foreground">
-        Log what you do. LifeOS turns it into streaks, levels and a record of the person you are becoming.
+        Log what you do. LifeOS turns it into streaks, achievements and a record of the person you are becoming.
       </p>
       <form className="mx-auto mt-8 max-w-xs" onSubmit={(e) => { e.preventDefault(); setStep(1); }}>
         <Input autoFocus aria-label="Your name" value={name} onChange={(e) => setName(e.target.value)} placeholder="What should we call you?" className="h-12 rounded-2xl text-center text-[15px]" />

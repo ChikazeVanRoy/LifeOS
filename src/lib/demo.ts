@@ -72,10 +72,10 @@ export const createDemoData = (today: string): AppData => {
       pagesInBook += pages;
       if (pagesInBook >= bookLength) {
         data.projects[data.projects.length - 1].finishedAt = d;
-        book = (book + 1) % BOOKS.length;
+        book++;
         pagesInBook = 0;
         bookLength = 240 + Math.floor(r() * 200);
-        if (i > 0) data.projects.push({ id: pid(book), goalId: "reading", kind: "book", title: BOOKS[book], subtitle: "Sample title", target: bookLength, startedAt: d });
+        if (i > 0) data.projects.push({ id: pid(book), goalId: "reading", kind: "book", title: BOOKS[book % BOOKS.length], subtitle: "Sample title", target: bookLength, startedAt: d });
       }
     }
 

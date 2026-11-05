@@ -19,11 +19,31 @@ const toV2 = (input: Raw): Raw => ({
 
 const toV3 = (input: Raw): Raw => ({ ...input, version: 3, anki: null });
 
+/** XP and levels are gone, along with the settings that tuned them. */
+const toV4 = (input: Raw): Raw => {
+  const settings = { ...(isObject(input.settings) ? input.settings : {}) };
+  delete settings.dailyXpCap;
+  return {
+    ...input,
+    version: 4,
+    settings,
+    goals: list(input.goals).map((g) => ({
+      ...g,
+      metrics: list(g.metrics).map((metric) => {
+        const kept = { ...metric };
+        delete kept.xp;
+        return kept;
+      }),
+    })),
+  };
+};
+
 /**
  * Upgrades saved data and older backups. Only the structure changes: names, goals,
  * roadmaps and history stay exactly as the person left them.
  */
 export const migrate = (input: unknown): unknown => {
-  if (!isObject(input) || typeof input.version !== "number" || input.version >= 3) return input;
-  return toV3(input.version < 2 ? toV2(input) : input);
+  if (!isObject(input) || typeof input.version !== "number" || input.version >= 4) return input;
+  const v2 = input.version < 2 ? toV2(input) : input;
+  return toV4(input.version < 3 ? toV3(v2) : v2);
 };

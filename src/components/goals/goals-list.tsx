@@ -22,7 +22,7 @@ function Roadmaps() {
   return (
     <section>
       <SectionTitle title="Long-term roadmaps" />
-      <p className="mb-3 px-1 text-sm text-muted-foreground">Bigger than any habit. Mark steps as they happen, and earn Life XP for each one.</p>
+      <p className="mb-3 px-1 text-sm text-muted-foreground">Bigger than any habit. Mark steps as they happen.</p>
       {d.roadmaps.length > 0 && (
         <div className="mb-4 grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-2">
           {d.roadmaps.map((r) => (

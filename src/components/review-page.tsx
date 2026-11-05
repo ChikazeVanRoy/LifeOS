@@ -55,8 +55,8 @@ export function ReviewPage() {
           <Stat label="Activities" value={fmtNum(r.totals.sessions)} now={r.totals.sessions} before={r.previous.sessions} compare={r.compareLabel} />
           <Stat label="Active days" value={`${r.totals.activeDays} / 7`} now={r.totals.activeDays} before={r.previous.activeDays} compare={r.compareLabel} />
           <div>
-            <p className="font-display num text-3xl font-medium">{fmtNum(r.xp)}</p>
-            <p className="text-xs text-muted-foreground">XP earned</p>
+            <p className="font-display num text-3xl font-medium">{fmtNum(r.streaksKept.length)}</p>
+            <p className="text-xs text-muted-foreground">Streaks kept</p>
           </div>
         </div>
       </motion.section>

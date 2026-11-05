@@ -21,9 +21,7 @@ export interface MetricDef {
   id: string;
   label: string;
   unit: string;
-  /** XP for this output: 1 XP per `per` units, up to `cap` XP a day. */
-  xp?: { per: number; cap: number };
-  /** Used only to size XP when a session has no duration. Never added to hours. */
+  /** Sizes a session with no duration on heatmaps and for minimum lengths. Never added to hours. */
   minutesPer?: number;
 }
 
@@ -198,12 +196,10 @@ export interface Settings {
   timezone: string;
   onboarded: boolean;
   celebrations: boolean;
-  /** Most XP one goal can earn from sessions in a day. */
-  dailyXpCap: number;
 }
 
 export interface AppData {
-  version: 3;
+  version: 4;
   settings: Settings;
   goals: Goal[];
   logs: LogEntry[];

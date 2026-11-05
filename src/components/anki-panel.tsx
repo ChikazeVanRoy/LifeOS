@@ -78,7 +78,7 @@ function Connect({ feed }: { feed: AnkiFeed }) {
       <DeckMapper feed={feed} mapping={mapping} onChange={setMapping} />
       {preview.days > 0 ? (
         <p className="text-xs text-muted-foreground">
-          This adds <b className="num font-medium text-foreground">{plural(preview.days, "daily session")}</b>, <b className="num font-medium text-foreground">{fmtHours(preview.minutes)}</b> and <b className="num font-medium text-foreground">{plural(preview.reviews, "review")}</b>{first ? ` going back to ${fmtFull(first)}` : ""}. Levels, streaks and achievements will update to include them.
+          This adds <b className="num font-medium text-foreground">{plural(preview.days, "daily session")}</b>, <b className="num font-medium text-foreground">{fmtHours(preview.minutes)}</b> and <b className="num font-medium text-foreground">{plural(preview.reviews, "review")}</b>{first ? ` going back to ${fmtFull(first)}` : ""}. Streaks and achievements will update to include them.
           {preview.skippedDays > 0 && ` ${preview.skippedDays === 1 ? "1 day already logged by hand stays as it is." : `${preview.skippedDays} days already logged by hand stay as they are.`}`}
           {" "}Only daily totals come across, never card text.
         </p>

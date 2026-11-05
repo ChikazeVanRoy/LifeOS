@@ -6,8 +6,8 @@ const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6];
 
 export type CreativeFocus = "general" | "writing" | "music" | "art";
 
-const WORDS: MetricDef = { id: "words", label: "Words", unit: "words", xp: { per: 50, cap: 40 }, minutesPer: 0.05 };
-const finished = (label: string): MetricDef => ({ id: "pieces", label, unit: label.toLowerCase(), xp: { per: 1, cap: 20 } });
+const WORDS: MetricDef = { id: "words", label: "Words", unit: "words", minutesPer: 0.05 };
+const finished = (label: string): MetricDef => ({ id: "pieces", label, unit: label.toLowerCase() });
 
 export const CREATIVE_FOCUSES: Record<CreativeFocus, { label: string; name: string; icon: string; types: string[]; metrics: MetricDef[] }> = {
   general: { label: "A bit of everything", name: "Creativity", icon: "palette", types: ["Making", "Practice", "Planning", "Research"], metrics: [finished("Pieces")] },
@@ -16,7 +16,7 @@ export const CREATIVE_FOCUSES: Record<CreativeFocus, { label: string; name: stri
     name: "Writing",
     icon: "feather",
     types: ["Drafting", "Editing", "Planning", "Research"],
-    metrics: [WORDS, { id: "chapters", label: "Chapters", unit: "chapters", xp: { per: 1, cap: 20 } }],
+    metrics: [WORDS, { id: "chapters", label: "Chapters", unit: "chapters" }],
   },
   music: { label: "Music", name: "Music", icon: "music", types: ["Practice", "Composing", "Recording", "Mixing"], metrics: [finished("Tracks")] },
   art: { label: "Visual art", name: "Art", icon: "palette", types: ["Drawing", "Painting", "Sketching", "Digital"], metrics: [finished("Pieces")] },
@@ -81,7 +81,7 @@ const TEMPLATES: Record<GoalKind, (o: GoalOptions) => Partial<Goal>> = {
     description: "A little every day adds up.",
     schedules: [{ from: "", schedule: { kind: "days", days: EVERY_DAY } }],
     activityTypes: toTypes(["Fiction", "Nonfiction"], 30),
-    metrics: [{ id: "pages", label: "Pages", unit: "pages", xp: { per: 5, cap: 20 }, minutesPer: 1.5 }],
+    metrics: [{ id: "pages", label: "Pages", unit: "pages", minutesPer: 1.5 }],
   }),
   career: () => ({
     name: "Learning",
@@ -193,7 +193,6 @@ export const defaultSettings: Settings = {
   timezone: "auto",
   onboarded: false,
   celebrations: true,
-  dailyXpCap: 150,
 };
 
 /** Sensible regional defaults from the browser's locale. Both can be changed in Settings. */
@@ -213,7 +212,7 @@ export const createEmptyData = (today: ISODate, overrides: Partial<Settings> = {
   const settings = { ...defaultSettings, ...overrides };
   const goals = createDefaultGoals(today, settings.weightUnit);
   return {
-    version: 3,
+    version: 4,
     settings,
     goals,
     logs: [],

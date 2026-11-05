@@ -25,7 +25,6 @@ export const describeLog = (log: LogEntry, d: Derived) => {
 export function ActivityRow({ log, d, showDate }: { log: LogEntry; d: Derived; showDate?: boolean }) {
   const openLog = useUI((s) => s.openLog);
   const { goal, title, meta } = describeLog(log, d);
-  const xp = d.logXp.get(log.id) ?? 0;
   const imported = log.source === "anki";
   const body = (
     <>
@@ -42,7 +41,6 @@ export function ActivityRow({ log, d, showDate }: { log: LogEntry; d: Derived; s
       ) : (
         log.time && <span className="num hidden text-xs text-muted-foreground sm:block">{fmtTime(log.time)}</span>
       )}
-      <span className="num w-12 shrink-0 text-right text-xs font-medium text-muted-foreground">{xp > 0 ? `+${xp}` : "0"} XP</span>
     </>
   );
   // Imported entries follow Anki, so they are managed from Settings.

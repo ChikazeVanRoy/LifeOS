@@ -17,12 +17,11 @@ import { addDays, localParts } from "@/lib/engine/dates";
 import { parseLogText } from "@/lib/engine/parse";
 import { estimate1RM } from "@/lib/engine/records";
 import { logOrder } from "@/lib/engine/stats";
-import { sessionXp } from "@/lib/engine/xp";
 import { useMediaQuery } from "@/lib/hooks";
 import { useStore } from "@/lib/store";
-import type { ExerciseEntry, Goal, LogEntry } from "@/lib/types";
+import type { ExerciseEntry, Goal } from "@/lib/types";
 import { useUI, type LogPreset } from "@/lib/ui";
-import { cn, fmtNum } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 const DURATIONS = [10, 15, 20, 30, 45, 60, 90];
 
@@ -128,8 +127,6 @@ function ExerciseEditor({ exercises, onChange, history, unit }: { exercises: Exe
 function LogBody({ preset, onDone }: { preset: LogPreset | null; onDone: () => void }) {
   const d = useDerived();
   const { form, setForm, pickMinutes } = useForm(preset);
-  const logs = useStore((s) => s.data.logs);
-  const dailyCap = useStore((s) => s.data.settings.dailyXpCap);
   const ankiMapping = useStore((s) => s.data.anki?.mapping);
   const { addLog, updateLog, deleteLog, restoreLog, addMeasurement, updateProject, startTimer } = useStore.getState();
   const [more, setMore] = useState(false);
@@ -190,14 +187,6 @@ function LogBody({ preset, onDone }: { preset: LogPreset | null; onDone: () => v
   );
   const exercises = form.exercises.filter((e) => e.exercise.trim());
 
-  const xpPreview = useMemo(() => {
-    if (!goal || form.weighIn) return 0;
-    const draft: LogEntry = { id: "draft", goalId: goal.id, typeId: form.typeId, date: form.date, time: "23:59", tz: "", minutes, metrics, createdAt: Number.MAX_SAFE_INTEGER, updatedAt: 0 };
-    const sameDay = logs.filter((l) => l.goalId === goal.id && l.date === form.date && l.id !== editing?.id).sort(logOrder);
-    return sessionXp(goal, [...sameDay, draft], dailyCap).byLog.get("draft") ?? 0;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [goal, form.typeId, form.date, form.minutes, form.metrics, form.weighIn, logs, dailyCap, editing]);
-
   const submit = () => {
     if (!goal) return;
     if (form.date > d.today) {
@@ -229,10 +218,7 @@ function LogBody({ preset, onDone }: { preset: LogPreset | null; onDone: () => v
     } else {
       const log = addLog(payload);
       if (form.finish && form.projectId) updateProject(form.projectId, { finishedAt: form.date });
-      toast.success(xpPreview > 0 ? `Logged. +${xpPreview} XP` : "Logged", {
-        description: xpPreview === 0 ? "Daily XP cap reached. It still counts towards your totals." : undefined,
-        action: { label: "Undo", onClick: () => deleteLog(log.id) },
-      });
+      toast.success("Logged", { action: { label: "Undo", onClick: () => deleteLog(log.id) } });
     }
     onDone();
   };
@@ -437,7 +423,6 @@ function LogBody({ preset, onDone }: { preset: LogPreset | null; onDone: () => v
           className="aurora-bg flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl text-[15px] font-medium transition-transform active:scale-[0.98] disabled:opacity-50"
         >
           {editing ? "Save changes" : form.weighIn ? "Save" : `Log ${goal?.name ?? "activity"}`}
-          {!editing && !form.weighIn && xpPreview > 0 && <span className="num rounded-lg bg-white/20 px-2 py-0.5 text-[13px]">+{fmtNum(xpPreview)} XP</span>}
         </button>
       </div>
     </div>

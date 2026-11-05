@@ -191,7 +191,7 @@ export function ApplicationsPanel() {
   return (
     <section className="card p-5">
       <h3 className="text-[15px] font-medium">Job applications</h3>
-      <p className="mb-3 text-sm text-muted-foreground">Optional. Kept here for reference and left out of XP.</p>
+      <p className="mb-3 text-sm text-muted-foreground">Optional. Kept here for reference.</p>
       <div className="space-y-1">
         {list.map((a) => (
           <div key={a.id} className="group flex items-center gap-3 py-1.5">

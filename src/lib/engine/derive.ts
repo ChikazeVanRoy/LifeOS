@@ -17,7 +17,6 @@ import {
   type StreakResult,
   type WeekProgress,
 } from "./streaks";
-import { consistencyXp, GOAL_CURVE, levelFrom, LIFE_CURVE, sessionXp, XP_RULES, type LevelInfo, type XpEvent } from "./xp";
 
 export interface MilestoneView extends Milestone {
   completedOn: ISODate | null;
@@ -41,8 +40,6 @@ export interface GoalView {
   week: WeekProgress;
   weekMinutes: number;
   marks: { date: ISODate; mark: DayMark }[];
-  xp: number;
-  level: LevelInfo;
   todayLogs: LogEntry[];
   todayMinutes: number;
   doneToday: boolean;
@@ -67,11 +64,6 @@ export interface Derived {
   logs: LogEntry[];
   totals: Totals;
   overallStreak: StreakResult;
-  xp: number;
-  level: LevelInfo;
-  xpEvents: XpEvent[];
-  xpToday: number;
-  logXp: Map<string, number>;
   achievements: AchievementState[];
   milestones: MilestoneView[];
   roadmaps: (Roadmap & { milestones: MilestoneView[]; progress: number })[];
@@ -126,13 +118,11 @@ export const derive = (data: AppData, now: Date = new Date()): Derived => {
   for (const l of logs) (logsByGoal.get(l.goalId) ?? logsByGoal.set(l.goalId, []).get(l.goalId)!).push(l);
 
   const facts: GoalFacts[] = [];
-  const xpEvents: XpEvent[] = [];
-  const logXp = new Map<string, number>();
   const effortAll = new Map<ISODate, number>();
 
   const views = [...data.goals]
     .sort((a, b) => a.order - b.order)
-    .map((goal): Omit<GoalView, "xp" | "level"> => {
+    .map((goal): GoalView => {
       const goalLogs = logsByGoal.get(goal.id) ?? [];
       const pauses = pausesFor(goal.id, data.pauses);
       const minutesByDay = new Map<ISODate, number>();
@@ -151,18 +141,12 @@ export const derive = (data: AppData, now: Date = new Date()): Derived => {
       const strength = goal.kind === "fitness" ? strengthSummary(goalLogs) : null;
       facts.push({ goal, logs: goalLogs, streak, projects, prs: strength?.prs ?? [], measurements });
 
-      const session = sessionXp(goal, goalLogs, data.settings.dailyXpCap);
-      session.byLog.forEach((v, k) => logXp.set(k, v));
-      xpEvents.push(...session.events, ...consistencyXp(goal, goalLogs, streak, pauses, today, weekStartsOn));
 
       const milestones = data.milestones
         .filter((m) => m.goalId === goal.id)
         .sort((a, b) => a.order - b.order)
         .map((m) => viewMilestone(m, goalLogs, projects, measurements, goal));
 
-      for (const p of projects) {
-        if (p.finishedAt) xpEvents.push({ date: p.finishedAt, goalId: goal.id, amount: XP_RULES.project[p.kind], source: "project", label: `Finished ${p.title}` });
-      }
 
       const firstLog = goalLogs[0]?.date;
       const since = firstLog && firstLog < goal.createdAt ? firstLog : goal.createdAt;
@@ -216,10 +200,6 @@ export const derive = (data: AppData, now: Date = new Date()): Derived => {
     });
   const everyMilestone = [...allMilestones, ...roadmapViews.flatMap((r) => r.milestones).filter((m) => !allMilestones.some((x) => x.id === m.id))];
 
-  for (const m of everyMilestone) {
-    if (m.completedOn) xpEvents.push({ date: m.completedOn, goalId: m.goalId, amount: XP_RULES.milestone, source: "milestone", label: m.title });
-  }
-
   const overallStreak = computeOverallStreak(
     new Set(logs.map((l) => l.date)),
     views
@@ -234,41 +214,18 @@ export const derive = (data: AppData, now: Date = new Date()): Derived => {
     milestoneDates: everyMilestone.flatMap((m) => (m.completedOn ? [m.completedOn] : [])),
     weekStartsOn,
   });
-  for (const a of achievements) {
-    if (a.unlockedOn) xpEvents.push({ date: a.unlockedOn, goalId: a.goalId, amount: XP_RULES.achievement[a.tier], source: "achievement", label: a.title });
-  }
-
-  xpEvents.sort((a, b) => a.date.localeCompare(b.date));
-  const xpByGoal = new Map<string, number>();
-  let xp = 0;
-  let xpToday = 0;
-  for (const e of xpEvents) {
-    xp += e.amount;
-    if (e.date === today) xpToday += e.amount;
-    if (e.goalId) xpByGoal.set(e.goalId, (xpByGoal.get(e.goalId) ?? 0) + e.amount);
-  }
-
-  const allGoals: GoalView[] = views.map((v) => {
-    const goalXp = xpByGoal.get(v.goal.id) ?? 0;
-    return { ...v, xp: goalXp, level: levelFrom(goalXp, GOAL_CURVE) };
-  });
 
   return {
     today,
     tz,
     weekStartsOn,
     weightUnit: data.settings.weightUnit,
-    goals: allGoals.filter((g) => !g.goal.archived),
-    allGoals,
-    byId: new Map(allGoals.map((g) => [g.goal.id, g])),
+    goals: views.filter((g) => !g.goal.archived),
+    allGoals: views,
+    byId: new Map(views.map((g) => [g.goal.id, g])),
     logs,
     totals: totalsOf(logs),
     overallStreak,
-    xp,
-    level: levelFrom(xp, LIFE_CURVE),
-    xpEvents,
-    xpToday,
-    logXp,
     achievements,
     milestones: everyMilestone,
     roadmaps: roadmapViews,

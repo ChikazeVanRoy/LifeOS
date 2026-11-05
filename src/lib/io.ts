@@ -32,7 +32,6 @@ const goal = z.object({
       id: z.string(),
       label: z.string(),
       unit: z.string(),
-      xp: z.object({ per: z.number().positive(), cap: nonNeg }).optional(),
       minutesPer: nonNeg.optional(),
     }),
   ),
@@ -59,7 +58,7 @@ const log = z.object({
 });
 
 const appData = z.object({
-  version: z.literal(3),
+  version: z.literal(4),
   settings: z
     .object({
       name: z.string(),
@@ -69,7 +68,6 @@ const appData = z.object({
       timezone: z.string(),
       onboarded: z.boolean(),
       celebrations: z.boolean(),
-      dailyXpCap: z.number().int().min(10),
     })
     .partial()
     .transform((s) => ({ ...defaultSettings, ...s, onboarded: true })),
