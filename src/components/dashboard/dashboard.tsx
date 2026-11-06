@@ -159,16 +159,16 @@ function Lifetime({ d }: { d: Derived }) {
   const languages = d.goals.filter((g) => g.goal.kind === "language");
   const languageMinutes = languages.reduce((sum, g) => sum + g.weekMinutes, 0);
   const tiles = d.goals.flatMap((g) => {
-    if (g.goal.kind !== "language") return [{ id: g.goal.id, icon: g.goal.icon, label: g.goal.name, minutes: g.weekMinutes }];
+    if (g.goal.kind !== "language") return [{ id: g.goal.id, icon: g.goal.icon, label: g.goal.name, minutes: g.weekMinutes, target: g.goal.weeklyMinutes }];
     if (g !== languages[0]) return [];
-    return [{ id: "languages", icon: "languages", label: languages.length > 1 ? "Languages" : g.goal.name, minutes: languageMinutes }];
+    return [{ id: "languages", icon: "languages", label: languages.length > 1 ? "Languages" : g.goal.name, minutes: languageMinutes, target: languages.reduce((n, g) => n + (g.goal.weeklyMinutes ?? 0), 0) || undefined }];
   });
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-[repeat(auto-fit,minmax(130px,1fr))]">
       {tiles.map((t) => (
         <motion.div key={t.id} variants={rise} className="card p-4 max-md:last:odd:col-span-2">
           <Icon name={t.icon} size={16} className="text-muted-foreground" strokeWidth={1.8} />
-          <p className="font-display num mt-2 text-[28px] leading-none font-medium">{fmtHours(t.minutes)}</p>
+          <p className="font-display num mt-2 text-[28px] leading-none font-medium">{fmtHours(t.minutes)}{t.target ? <span className="text-base text-muted-foreground"> / {fmtHours(t.target)}</span> : null}</p>
           <p className="mt-1 truncate text-xs text-muted-foreground">{t.label} · this week</p>
         </motion.div>
       ))}
