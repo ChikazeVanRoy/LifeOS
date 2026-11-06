@@ -6,7 +6,6 @@ import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ActivityRow } from "@/components/activity-row";
-import { milestoneDetail } from "@/components/dashboard/dashboard";
 import { WeekDots, weekLabel } from "@/components/goal-card";
 import { useDerived } from "@/components/shell/providers";
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,7 @@ import { useStore } from "@/lib/store";
 import { useUI } from "@/lib/ui";
 import { fmtCompact, fmtDuration, fmtHours, fmtNum, plural } from "@/lib/utils";
 import { GoalEditor } from "./goal-editor";
-import { MilestoneList } from "./milestones";
+import { MilestoneList, RoadmapSteps } from "./milestones";
 import { ApplicationsPanel, LiftsPanel, MeasurementPanel, ProficiencyPanel, ProjectsPanel } from "./panels";
 
 const Tile = ({ label, value, sub }: { label: string; value: string; sub?: string }) => (
@@ -184,16 +183,18 @@ export function GoalDetail() {
         {goal.metrics[0] && goal.kind !== "language" && <OutputChart view={view} metric={goal.metrics[0].id} />}
 
         {view.roadmap && (
-          <Link href="/goals" className="card flex items-center gap-3 p-4 transition-transform hover:-translate-y-0.5" style={goalVar(view.roadmap.color)}>
-            <Ring value={view.roadmap.progress} size={44} stroke={4}>
-              <Icon name={view.roadmap.icon} size={17} style={{ color: "var(--goal)" }} strokeWidth={1.9} />
-            </Ring>
-            <div className="min-w-0 flex-1">
-              <p className="eyebrow">Part of your roadmap</p>
-              <p className="truncate text-[15px] font-medium">{view.roadmap.title} <span className="num text-xs font-normal text-muted-foreground">{Math.round(view.roadmap.progress * 100)}%</span></p>
-              {view.roadmap.next && <p className="truncate text-xs text-muted-foreground">Next: {view.roadmap.next.title}{milestoneDetail(view.roadmap.next) ? ` (${milestoneDetail(view.roadmap.next)})` : ""}</p>}
-            </div>
-          </Link>
+          <section className="card p-5" style={goalVar(view.roadmap.color)}>
+            <Link href="/roadmaps" className="mb-3 flex items-center gap-3">
+              <Ring value={view.roadmap.progress} size={44} stroke={4}>
+                <Icon name={view.roadmap.icon} size={17} style={{ color: "var(--goal)" }} strokeWidth={1.9} />
+              </Ring>
+              <div className="min-w-0 flex-1">
+                <p className="eyebrow">Part of your roadmap</p>
+                <p className="truncate text-[15px] font-medium">{view.roadmap.title} <span className="num text-xs font-normal text-muted-foreground">{Math.round(view.roadmap.progress * 100)}%</span></p>
+              </div>
+            </Link>
+            <RoadmapSteps milestones={d.roadmaps.find((r) => r.id === view.roadmap!.id)?.milestones ?? []} roadmapId={view.roadmap.id} />
+          </section>
         )}
 
         <section className="card p-5">

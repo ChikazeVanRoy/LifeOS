@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, CalendarDays, Compass, Home, LayoutGrid, NotebookPen, Plus, Settings, Trophy, X } from "lucide-react";
+import { BarChart3, CalendarDays, Compass, Home, LayoutGrid, Mountain, NotebookPen, Plus, Settings, Trophy, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -20,6 +20,7 @@ import { useDerived } from "./providers";
 const NAV = [
   { href: "/", label: "Dashboard", short: "Home", icon: Home },
   { href: "/goals", label: "Goals", short: "Goals", icon: LayoutGrid },
+  { href: "/roadmaps", label: "Roadmaps", short: "Roadmaps", icon: Mountain },
   { href: "/activity", label: "Activity", short: "Activity", icon: CalendarDays },
   { href: "/analytics", label: "Analytics", short: "Stats", icon: BarChart3 },
   { href: "/achievements", label: "Achievements", short: "Awards", icon: Trophy },
@@ -95,7 +96,8 @@ function Sidebar() {
 function BottomNav() {
   const path = usePathname();
   const openLog = useUI((s) => s.openLog);
-  const items = [NAV[0], NAV[1], null, NAV[2], NAV[3]];
+  const pick = (href: string) => NAV.find((n) => n.href === href)!;
+  const items = [pick("/"), pick("/goals"), null, pick("/activity"), pick("/analytics")];
   return (
     <nav className="safe-b fixed inset-x-0 bottom-0 z-30 border-t bg-background/85 backdrop-blur-xl md:hidden">
       <div className="mx-auto grid h-[62px] max-w-md grid-cols-5 items-center">
@@ -126,6 +128,7 @@ function MobileTop() {
     <div className="sticky top-0 z-20 -mx-4 mb-3 flex h-12 items-center justify-between bg-background/85 px-4 backdrop-blur-xl md:hidden" style={{ paddingTop: "env(safe-area-inset-top)", boxSizing: "content-box" }}>
       <Link href="/"><Logo size={22} /></Link>
       <div className="flex items-center gap-0.5 text-muted-foreground">
+        <Link href="/roadmaps" aria-label="Roadmaps" className="grid size-10 place-items-center"><Mountain size={20} strokeWidth={1.8} /></Link>
         <Link href="/review" aria-label="Weekly review" className="grid size-10 place-items-center"><NotebookPen size={20} strokeWidth={1.8} /></Link>
         <Link href="/achievements" aria-label="Achievements" className="grid size-10 place-items-center"><Trophy size={20} strokeWidth={1.8} /></Link>
         <Link href="/settings" aria-label="Settings" className="grid size-10 place-items-center"><Settings size={20} strokeWidth={1.8} /></Link>
