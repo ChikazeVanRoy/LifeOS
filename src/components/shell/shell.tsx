@@ -87,6 +87,7 @@ function Sidebar() {
           <span className="block text-xs text-muted-foreground">Life streak</span>
         </span>
       </Link>
+      <Link href="/settings" className="num mt-2 px-2 text-[11px] text-muted-foreground hover:text-foreground">v{process.env.NEXT_PUBLIC_APP_VERSION}</Link>
     </aside>
   );
 }

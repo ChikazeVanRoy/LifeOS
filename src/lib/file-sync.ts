@@ -197,3 +197,19 @@ export const useFileSync = () => {
     };
   }, []);
 };
+
+export interface UpdateInfo {
+  /** Commits on GitHub that this copy doesn't have yet. */
+  behind: number;
+  error?: string;
+}
+
+export const checkUpdate = async (): Promise<UpdateInfo> => {
+  const res = await fetch("/api/update", { headers });
+  return res.json();
+};
+
+export const installUpdate = async (): Promise<{ ok: boolean; message: string }> => {
+  const res = await fetch("/api/update", { method: "POST", headers });
+  return res.json();
+};

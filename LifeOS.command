@@ -16,6 +16,16 @@ fail() {
   exit 1
 }
 
+# Get the latest version first. Only a plain fast-forward, so it never touches local changes, and offline just carries on.
+# If the pull replaced this script, start again from the new one (zsh reads scripts as it goes).
+if [[ -z $LIFEOS_PULLED && -d .git ]] && command -v git >/dev/null; then
+  BEFORE=$(shasum "${0:A}")
+  echo "Checking for updates..."
+  git pull --ff-only --quiet 2>/dev/null || echo "(Couldn't update. Starting the version you have.)"
+  [[ $(shasum "${0:A}") == $BEFORE ]] || { LIFEOS_PULLED=1 exec "${0:A}"; }
+  export LIFEOS_PULLED=1
+fi
+
 # Its icon and hidden extension aren't kept by Git, so it sets them on itself: after a fresh clone, or a pull that
 # replaced this file. Only for looks, so a failure here never stops the app starting.
 if ! xattr "${0:A}" 2>/dev/null | grep -q com.apple.ResourceFork; then

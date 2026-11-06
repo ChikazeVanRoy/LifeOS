@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Download, FlaskConical, FolderOpen, Pencil, Plus, Trash2, Upload } from "lucide-react";
+import { ArrowDown, ArrowUp, Download, RefreshCw, FlaskConical, FolderOpen, Pencil, Plus, Trash2, Upload } from "lucide-react";
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { AnkiPanel } from "@/components/anki-panel";
@@ -14,7 +14,7 @@ import { GoalBadge, PageHeader } from "@/components/viz/primitives";
 import { createGoal, nextColor } from "@/lib/defaults";
 import { deviceTimezone, fmtFull } from "@/lib/engine/dates";
 import { describeSchedule } from "@/lib/engine/streaks";
-import { revealFile } from "@/lib/file-sync";
+import { checkUpdate, installUpdate, revealFile } from "@/lib/file-sync";
 import { parseImport, toExport } from "@/lib/io";
 import { useStore } from "@/lib/store";
 import { useUI } from "@/lib/ui";
@@ -68,6 +68,34 @@ function DataFileRow() {
   return (
     <Row label="Data file" hint={state}>
       <Button variant="secondary" size="sm" onClick={revealFile}><FolderOpen /> Show in Finder</Button>
+    </Row>
+  );
+}
+
+function UpdateRow() {
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState("");
+  const run = async (install: boolean) => {
+    setBusy(true);
+    try {
+      if (install) {
+        const r = await installUpdate();
+        setNote(r.message);
+      } else {
+        const r = await checkUpdate();
+        setNote(r.error ? r.error : r.behind ? `${plural(r.behind, "update")} available.` : "You're up to date.");
+      }
+    } catch {
+      setNote("Couldn't reach the app.");
+    }
+    setBusy(false);
+  };
+  return (
+    <Row label="Version" hint={note || `v${process.env.NEXT_PUBLIC_APP_VERSION}`}>
+      <div className="flex gap-2">
+        <Button variant="secondary" size="sm" disabled={busy} onClick={() => void run(false)}><RefreshCw /> Check</Button>
+        <Button variant="secondary" size="sm" disabled={busy} onClick={() => void run(true)}>Update</Button>
+      </div>
     </Row>
   );
 }
@@ -196,6 +224,10 @@ export function SettingsPage() {
 
         <Group title="Rest" description="Planned breaks never break a streak. Weekly targets shrink to fit.">
           <Rests />
+        </Group>
+
+        <Group title="App" description="Updates come from GitHub. After updating, close LifeOS and open it again.">
+          <UpdateRow />
         </Group>
 
         <Group title="Your data" description="Saved automatically to a file on this Mac. The browser only keeps a working copy.">
