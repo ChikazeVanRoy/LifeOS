@@ -177,7 +177,7 @@ const runLength = (dayCount: number, weekCount: number, spanDays: number, unit: 
   unit === "day" ? dayCount + activeInWeeks : weekCount + Math.floor(spanDays / 7);
 
 /** Reduces periods to streak runs. `unit` is how lengths are reported. */
-export const summarize = (periods: Period[], unit: StreakUnit): StreakResult => {
+export const summarize = (periods: Period[], unit: StreakUnit, forgive = true): StreakResult => {
   const runs: StreakRun[] = [];
   const timeline: StreakResult["timeline"] = [];
   let open: { start: ISODate; end: ISODate; days: number; weeks: number; dayStretch: number; weekDays: number; forgiven: number } | null = null;
@@ -200,7 +200,7 @@ export const summarize = (periods: Period[], unit: StreakUnit): StreakResult => 
 
   for (const p of periods) {
     if (p.status === "missed") {
-      if (p.unit === "day" && open && !open.forgiven && !pendingMiss) pendingMiss = true;
+      if (forgive && p.unit === "day" && open && !open.forgiven && !pendingMiss) pendingMiss = true;
       else close(false);
     } else if (p.status === "met") {
       if (pendingMiss && open) {
@@ -271,8 +271,9 @@ export const owedOn = (g: OverallGoal, d: ISODate): boolean => {
 };
 
 /**
- * The Life streak counts days you showed up for anything. A quiet day only breaks it when
- * some goal actually needed you that day (see `owedOn`), so rest days never do.
+ * The Life streak asks you to keep up with every goal. Each day, every goal that needs you
+ * (see `owedOn`) has to be done. One missed day is forgiven for each goal, once per streak;
+ * a second miss on any goal ends it. Days count when you showed up for something.
  */
 export const computeOverallStreak = (
   activeDates: Set<ISODate>,
@@ -282,11 +283,32 @@ export const computeOverallStreak = (
   const sorted = [...activeDates].filter((d) => d <= today).sort();
   if (sorted.length === 0) return summarize([], "day");
   const periods: Period[] = [];
+  let forgiven = new Set<number>();
+  let running = false;
   for (let d = sorted[0]; d <= today; d = addDays(d, 1)) {
-    const due = goals.some((g) => owedOn(g, d));
-    periods.push(dayPeriod(d, due, activeDates.has(d) ? 1 : 0, today));
+    const active = activeDates.has(d);
+    // Goals that needed you today and have nothing logged.
+    const missing = goals.flatMap((g, i) => (owedOn(g, d) && !(g.sessions ? (g.sessions.get(d) ?? 0) > 0 : active) ? [i] : []));
+    if (!running) {
+      // A streak starts on a day when everything that was needed got done.
+      if (active && missing.length === 0) {
+        running = true;
+        periods.push(dayPeriod(d, false, 1, today));
+      } else periods.push(dayPeriod(d, false, 0, today));
+      continue;
+    }
+    const broke = d < today && missing.some((i) => forgiven.has(i));
+    if (broke) {
+      periods.push(dayPeriod(d, true, 0, today));
+      forgiven = new Set();
+      running = false;
+      continue;
+    }
+    if (d < today) for (const i of missing) forgiven.add(i);
+    periods.push(dayPeriod(d, false, active ? 1 : 0, today));
   }
-  return summarize(periods, "day");
+  const result = summarize(periods, "day", false);
+  return { ...result, currentForgiven: result.current > 0 ? forgiven.size : 0 };
 };
 
 export type DayMark = "done" | "due" | "missed" | "rest" | "paused" | "future";

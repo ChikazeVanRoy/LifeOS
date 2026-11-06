@@ -196,6 +196,34 @@ describe("overall streak", () => {
     expect(computeOverallStreak(new Set(["2026-03-02"]), goals, "2026-03-05").current).toBe(1);
   });
 
+  describe("with several goals", () => {
+    const two = (a: string[], b: string[]) => [
+      { schedules: ep(daily), pauses: [], since: "2026-03-01", sessions: on(...a), weekStartsOn: 1 as const },
+      { schedules: ep(daily), pauses: [], since: "2026-03-01", sessions: on(...b), weekStartsOn: 1 as const },
+    ];
+    const life = (a: string[], b: string[], today: string) => computeOverallStreak(new Set([...a, ...b]), two(a, b), today);
+    const days = ["2026-03-01", "2026-03-02", "2026-03-03", "2026-03-04", "2026-03-05", "2026-03-06"];
+
+    it("needs every goal, not just one", () => {
+      // Goal B is only done on the first day, so the second miss ends it even though A never stops.
+      const r = life(days, ["2026-03-01"], "2026-03-06");
+      expect(r.current).toBe(0);
+    });
+
+    it("forgives one missed day for each goal", () => {
+      const r = life(days, days.filter((d) => d !== "2026-03-03"), "2026-03-06");
+      expect(r.current).toBe(6);
+      expect(r.currentForgiven).toBe(1);
+      const both = life(days.filter((d) => d !== "2026-03-02"), days.filter((d) => d !== "2026-03-03"), "2026-03-06");
+      expect(both.currentForgiven).toBe(2);
+    });
+
+    it("forgives the same goal only once", () => {
+      const r = life(days, days.filter((d) => d !== "2026-03-02" && d !== "2026-03-05"), "2026-03-06");
+      expect(r.current).toBe(1);
+    });
+  });
+
   describe("with a weekly goal", () => {
     const weekly = (...dates: string[]) => [{ schedules: ep({ kind: "weekly", sessions: 3 }), pauses: [], since: "2026-01-01", sessions: on(...dates), weekStartsOn: 1 as const }];
     const life = (dates: string[], today: string) => computeOverallStreak(new Set(dates), weekly(...dates), today);

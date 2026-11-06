@@ -194,7 +194,7 @@ export function GoalDetail() {
                 <p className="truncate text-[15px] font-medium">{view.roadmap.title} <span className="num text-xs font-normal text-muted-foreground">{Math.round(view.roadmap.progress * 100)}%</span></p>
               </div>
             </Link>
-            <RoadmapSteps milestones={d.roadmaps.find((r) => r.id === view.roadmap!.id)?.milestones ?? []} roadmapId={view.roadmap.id} />
+            <RoadmapSteps milestones={d.roadmaps.find((r) => r.id === view.roadmap!.id)?.milestones ?? []} roadmapId={view.roadmap.id} goalId={goal.id} />
           </section>
         )}
 

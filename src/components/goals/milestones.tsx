@@ -12,7 +12,7 @@ import type { GoalView, MilestoneView } from "@/lib/engine/derive";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
-function Row({ m, today, line, last, onTrack }: { m: MilestoneView; today: string; line?: boolean; last?: boolean; onTrack?: (m: MilestoneView) => void }) {
+function Row({ m, today, line, last, onTrack, hideVia }: { m: MilestoneView; today: string; line?: boolean; last?: boolean; onTrack?: (m: MilestoneView) => void; hideVia?: string }) {
   const goalName = useDerived().byId.get(m.goalId ?? "")?.goal.name;
   const { updateMilestone, deleteMilestone } = useStore.getState();
   const done = !!m.completedOn;
@@ -34,7 +34,7 @@ function Row({ m, today, line, last, onTrack }: { m: MilestoneView; today: strin
       </motion.button>
       <div className="min-w-0 flex-1 pt-0.5">
         <p className={cn("text-sm", done && "text-muted-foreground")}>{m.title}</p>
-        {goalName && line && <p className="text-xs text-muted-foreground">via {goalName}</p>}
+        {goalName && line && m.goalId !== hideVia && <p className="text-xs text-muted-foreground">via {goalName}</p>}
         {m.completedOn ? (
           <p className="num text-xs text-muted-foreground">Reached {fmtFull(m.completedOn)}</p>
         ) : (
@@ -132,11 +132,12 @@ export function MilestoneList({ view }: { view: GoalView }) {
   );
 }
 
-export function RoadmapSteps({ milestones, roadmapId, onTrack }: { milestones: MilestoneView[]; roadmapId: string; onTrack?: (m: MilestoneView) => void }) {
+/** `goalId`: the goal page this is shown on, where "via" that goal would only repeat the page. */
+export function RoadmapSteps({ milestones, roadmapId, onTrack, goalId }: { milestones: MilestoneView[]; roadmapId: string; onTrack?: (m: MilestoneView) => void; goalId?: string }) {
   const d = useDerived();
   return (
     <div>
-      {milestones.map((m, i) => <Row key={m.id} m={m} today={d.today} line last={i === milestones.length - 1} onTrack={onTrack} />)}
+      {milestones.map((m, i) => <Row key={m.id} m={m} today={d.today} line last={i === milestones.length - 1} onTrack={onTrack} hideVia={goalId} />)}
       <AddMilestone roadmapId={roadmapId} goals={d.goals} />
     </div>
   );
