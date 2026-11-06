@@ -123,7 +123,7 @@ function Hero({ d, name }: { d: Derived; name: string }) {
             <p className="max-w-56 truncate text-sm text-muted-foreground">
               {d.goals.length === 0 ? "Add one to get started." : left.length > 0 ? left.map((g) => g.goal.name).join(", ") : alsoOpen.length > 0 ? `Still open this week: ${alsoOpen.map((g) => g.goal.name).join(", ")}` : "Anything you log still counts."}
             </p>
-            <p className="num mt-1 text-xs text-muted-foreground">{fmtHours(todayMinutes)} today · {fmtHours(d.totals.minutes)} total · {plural(d.totals.activeDays, "active day")}</p>
+            <p className="num mt-1 text-xs text-muted-foreground">{fmtHours(todayMinutes)} today · {fmtHours(d.goals.reduce((n, g) => n + g.weekMinutes, 0))} this week · {plural(d.totals.activeDays, "active day")}</p>
           </div>
         </Link>
 
@@ -154,12 +154,12 @@ function Hero({ d, name }: { d: Derived; name: string }) {
   );
 }
 
-/** Hours per area of life. Languages share one tile, however many there are. */
+/** This week's hours per area of life (all-time totals live on Analytics). Languages share one tile, however many there are. */
 function Lifetime({ d }: { d: Derived }) {
   const languages = d.goals.filter((g) => g.goal.kind === "language");
-  const languageMinutes = languages.reduce((sum, g) => sum + g.totals.minutes, 0);
+  const languageMinutes = languages.reduce((sum, g) => sum + g.weekMinutes, 0);
   const tiles = d.goals.flatMap((g) => {
-    if (g.goal.kind !== "language") return [{ id: g.goal.id, icon: g.goal.icon, label: g.goal.name, minutes: g.totals.minutes }];
+    if (g.goal.kind !== "language") return [{ id: g.goal.id, icon: g.goal.icon, label: g.goal.name, minutes: g.weekMinutes }];
     if (g !== languages[0]) return [];
     return [{ id: "languages", icon: "languages", label: languages.length > 1 ? "Languages" : g.goal.name, minutes: languageMinutes }];
   });
@@ -169,7 +169,7 @@ function Lifetime({ d }: { d: Derived }) {
         <motion.div key={t.id} variants={rise} className="card p-4 max-md:last:odd:col-span-2">
           <Icon name={t.icon} size={16} className="text-muted-foreground" strokeWidth={1.8} />
           <p className="font-display num mt-2 text-[28px] leading-none font-medium">{fmtHours(t.minutes)}</p>
-          <p className="mt-1 truncate text-xs text-muted-foreground">{t.label}</p>
+          <p className="mt-1 truncate text-xs text-muted-foreground">{t.label} · this week</p>
         </motion.div>
       ))}
     </div>
