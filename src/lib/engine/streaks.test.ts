@@ -50,15 +50,28 @@ describe("daily streaks", () => {
     expect(run(ep(daily), on("2026-03-01", "2026-03-02"), "2026-03-03").current).toBe(2);
   });
 
-  it("breaks after a fully missed day and remembers the longest run", () => {
+  it("forgives one missed day without counting it", () => {
     const r = run(ep(daily), on("2026-03-01", "2026-03-02", "2026-03-03", "2026-03-05"), "2026-03-05");
+    expect(r.current).toBe(4);
+    expect(r.currentForgiven).toBe(1);
+  });
+
+  it("keeps a streak alive the day after a miss, and flags the rest day", () => {
+    const r = run(ep(daily), on("2026-03-01"), "2026-03-03");
+    expect([r.current, r.currentForgiven]).toEqual([1, 1]);
+  });
+
+  it("forgives only one day per streak", () => {
+    const r = run(ep(daily), on("2026-03-01", "2026-03-02", "2026-03-04", "2026-03-06"), "2026-03-06");
     expect(r.current).toBe(1);
     expect(r.longest).toBe(3);
     expect(r.runs.map((x) => x.length)).toEqual([1, 3]);
   });
 
-  it("is broken once the missed day has passed", () => {
-    expect(run(ep(daily), on("2026-03-01"), "2026-03-03").current).toBe(0);
+  it("is broken by two missed days in a row", () => {
+    const r = run(ep(daily), on("2026-03-01"), "2026-03-04");
+    expect(r.current).toBe(0);
+    expect(r.longest).toBe(1);
   });
 
   it("counts several sessions in one day once", () => {
@@ -67,7 +80,8 @@ describe("daily streaks", () => {
 
   it("lets a backdated entry repair a gap", () => {
     expect(run(ep(daily), on("2026-03-01", "2026-03-02", "2026-03-03"), "2026-03-03").current).toBe(3);
-    expect(run(ep(daily), on("2026-03-01", "2026-03-03"), "2026-03-03").current).toBe(1);
+    expect(run(ep(daily), on("2026-03-01", "2026-03-03"), "2026-03-03").current).toBe(2);
+    expect(run(ep(daily), on("2026-03-01", "2026-03-04"), "2026-03-04").current).toBe(1);
   });
 
   it("counts activity dated before the goal was created", () => {
@@ -91,8 +105,8 @@ describe("specific-day schedules", () => {
     expect(run(ep(mwf), on("2026-03-02", "2026-03-04"), "2026-03-05").current).toBe(2);
   });
 
-  it("breaks when a scheduled day passes", () => {
-    expect(run(ep(mwf), on("2026-03-02", "2026-03-04"), "2026-03-07").current).toBe(0);
+  it("breaks when two scheduled days pass", () => {
+    expect(run(ep(mwf), on("2026-03-02"), "2026-03-07").current).toBe(0);
   });
 
   it("counts a bonus session on a rest day", () => {
@@ -177,13 +191,30 @@ describe("overall streak", () => {
     expect(computeOverallStreak(new Set(["2026-03-02", "2026-03-04"]), goals, "2026-03-05").current).toBe(2);
   });
 
-  it("breaks on a day something was due and nothing happened", () => {
-    expect(computeOverallStreak(new Set(["2026-03-02"]), goals, "2026-03-05").current).toBe(0);
+  it("breaks after two days something was due and nothing happened", () => {
+    expect(computeOverallStreak(new Set(["2026-03-02"]), goals, "2026-03-07").current).toBe(0);
+    expect(computeOverallStreak(new Set(["2026-03-02"]), goals, "2026-03-05").current).toBe(1);
   });
 
-  it("is not broken by weekly goals", () => {
-    const weekly = [{ schedules: ep({ kind: "weekly", sessions: 3 }), pauses: [], since: "2026-01-01" }];
-    expect(computeOverallStreak(new Set(["2026-03-02"]), weekly, "2026-03-20").current).toBe(1);
+  describe("with a weekly goal", () => {
+    const weekly = (...dates: string[]) => [{ schedules: ep({ kind: "weekly", sessions: 3 }), pauses: [], since: "2026-01-01", sessions: on(...dates), weekStartsOn: 1 as const }];
+    const life = (dates: string[], today: string) => computeOverallStreak(new Set(dates), weekly(...dates), today);
+
+    it("lets you skip days while the target is still reachable", () => {
+      // 3 a week, Monday done: Tuesday to Thursday are free.
+      expect(life(["2026-03-02"], "2026-03-05").current).toBe(1);
+    });
+
+    it("stops being free once the days left equal the sessions missing", () => {
+      // Monday only, 2 more needed: from Saturday, both remaining days are owed. Missing both ends the streak.
+      expect(life(["2026-03-02"], "2026-03-09").current).toBe(0);
+      expect(life(["2026-03-02"], "2026-03-08").current).toBe(1);
+    });
+
+    it("is free for the rest of the week once the target is met", () => {
+      const done = ["2026-03-02", "2026-03-03", "2026-03-04"];
+      expect(life(done, "2026-03-08").current).toBe(3);
+    });
   });
 });
 

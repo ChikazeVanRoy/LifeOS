@@ -76,7 +76,7 @@ export function GoalCard({ view, today }: { view: GoalView; today: string }) {
         </div>
       )}
       <div className="pointer-events-none relative z-10 flex items-center justify-between gap-3 text-sm">
-        <StreakPill current={streak.current} unit={streak.unit} />
+        <StreakPill current={streak.current} unit={streak.unit} rest={streak.currentForgiven > 0} />
         <span className="num truncate text-xs text-muted-foreground">{weekLabel(view)}</span>
       </div>
     </motion.div>

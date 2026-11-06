@@ -22,12 +22,16 @@ export interface StreakRun {
   length: number;
   unit: StreakUnit;
   ongoing: boolean;
+  /** Missed days the run forgave. A run forgives one, and it isn't counted in the length. */
+  forgiven: number;
 }
 
 export interface StreakResult {
   unit: StreakUnit;
   current: number;
   longest: number;
+  /** Whether the current streak is carrying its one forgiven day. */
+  currentForgiven: number;
   /** Every run, newest first. */
   runs: StreakRun[];
   periods: Period[];
@@ -176,7 +180,9 @@ const runLength = (dayCount: number, weekCount: number, spanDays: number, unit: 
 export const summarize = (periods: Period[], unit: StreakUnit): StreakResult => {
   const runs: StreakRun[] = [];
   const timeline: StreakResult["timeline"] = [];
-  let open: { start: ISODate; end: ISODate; days: number; weeks: number; dayStretch: number; weekDays: number } | null = null;
+  let open: { start: ISODate; end: ISODate; days: number; weeks: number; dayStretch: number; weekDays: number; forgiven: number } | null = null;
+  // A single missed day is forgiven once per run, but only if the run carries on after it (or is still open).
+  let pendingMiss = false;
 
   const close = (ongoing: boolean) => {
     if (!open) return;
@@ -186,15 +192,22 @@ export const summarize = (periods: Period[], unit: StreakUnit): StreakResult => 
       length: runLength(open.days, open.weeks, open.dayStretch, unit, open.weekDays),
       unit,
       ongoing,
+      forgiven: open.forgiven + (ongoing && pendingMiss ? 1 : 0),
     });
     open = null;
+    pendingMiss = false;
   };
 
   for (const p of periods) {
     if (p.status === "missed") {
-      close(false);
+      if (p.unit === "day" && open && !open.forgiven && !pendingMiss) pendingMiss = true;
+      else close(false);
     } else if (p.status === "met") {
-      if (!open) open = { start: p.start, end: p.end, days: 0, weeks: 0, dayStretch: 0, weekDays: 0 };
+      if (pendingMiss && open) {
+        open.forgiven = 1;
+        pendingMiss = false;
+      }
+      if (!open) open = { start: p.start, end: p.end, days: 0, weeks: 0, dayStretch: 0, weekDays: 0, forgiven: 0 };
       open.end = p.end;
       if (p.unit === "day") {
         open.days++;
@@ -212,9 +225,10 @@ export const summarize = (periods: Period[], unit: StreakUnit): StreakResult => 
   }
   close(true);
 
-  const current = runs.find((r) => r.ongoing)?.length ?? 0;
+  const ongoing = runs.find((r) => r.ongoing);
+  const current = ongoing?.length ?? 0;
   const longest = runs.reduce((m, r) => Math.max(m, r.length), 0);
-  return { unit, current, longest, runs: runs.reverse(), periods, timeline };
+  return { unit, current, currentForgiven: ongoing?.forgiven ?? 0, longest, runs: runs.reverse(), periods, timeline };
 };
 
 export const computeStreak = (input: StreakInput): StreakResult => {
@@ -227,11 +241,38 @@ export interface OverallGoal {
   schedules: ScheduleEpoch[];
   pauses: PauseRange[];
   since: ISODate;
+  /** Qualifying sessions per date, to tell when a weekly target has run out of slack. */
+  sessions?: Map<ISODate, number>;
+  weekStartsOn?: 0 | 1;
 }
 
 /**
- * The Life streak counts days you showed up for anything. A quiet day only breaks it
- * when a day-scheduled goal was actually due, so rest days and weekly goals never do.
+ * Whether a goal needs something from you on `d`. A day-scheduled goal does on its scheduled days.
+ * A weekly goal has slack: you can skip days freely until the days left in the week are exactly
+ * the sessions still missing. From then on, every day counts.
+ */
+export const owedOn = (g: OverallGoal, d: ISODate): boolean => {
+  if (d < g.since || isPaused(d, g.pauses)) return false;
+  const s = scheduleOn(g.schedules, d);
+  if (s.kind === "days") return s.days.includes(weekday(d));
+  const start = startOfWeek(d, g.weekStartsOn ?? 1);
+  const end = addDays(start, 6);
+  let available = 0;
+  let daysLeft = 0;
+  let doneBefore = 0;
+  for (let x = start; x <= end; x = addDays(x, 1)) {
+    if (x < g.since || isPaused(x, g.pauses)) continue;
+    available++;
+    if (x >= d) daysLeft++;
+    else doneBefore += g.sessions?.get(x) ?? 0;
+  }
+  const need = Math.ceil((s.sessions * available) / 7) - doneBefore;
+  return need > 0 && need >= daysLeft;
+};
+
+/**
+ * The Life streak counts days you showed up for anything. A quiet day only breaks it when
+ * some goal actually needed you that day (see `owedOn`), so rest days never do.
  */
 export const computeOverallStreak = (
   activeDates: Set<ISODate>,
@@ -242,11 +283,7 @@ export const computeOverallStreak = (
   if (sorted.length === 0) return summarize([], "day");
   const periods: Period[] = [];
   for (let d = sorted[0]; d <= today; d = addDays(d, 1)) {
-    const due = goals.some((g) => {
-      if (d < g.since || isPaused(d, g.pauses)) return false;
-      const s = scheduleOn(g.schedules, d);
-      return s.kind === "days" && s.days.includes(weekday(d));
-    });
+    const due = goals.some((g) => owedOn(g, d));
     periods.push(dayPeriod(d, due, activeDates.has(d) ? 1 : 0, today));
   }
   return summarize(periods, "day");

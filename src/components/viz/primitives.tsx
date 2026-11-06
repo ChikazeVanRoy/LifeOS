@@ -120,12 +120,12 @@ export function FlameIcon({ size = 20, lit = true, className }: { size?: number;
   );
 }
 
-export function StreakPill({ current, unit, className }: { current: number; unit: "day" | "week"; className?: string }) {
+export function StreakPill({ current, unit, className, rest }: { current: number; unit: "day" | "week"; className?: string; rest?: boolean }) {
   return (
-    <span className={cn("inline-flex items-center gap-1 text-sm font-medium", current === 0 && "text-muted-foreground", className)}>
+    <span title={rest ? "Includes 1 day rest" : undefined} className={cn("inline-flex items-center gap-1 text-sm font-medium", current === 0 && "text-muted-foreground", className)}>
       <FlameIcon size={16} lit={current > 0} />
       <span className="num">{current}</span>
-      <span className="text-xs font-normal text-muted-foreground">{unit === "day" ? "d" : "wk"}</span>
+      <span className="text-xs font-normal text-muted-foreground">{unit === "day" ? "d" : "wk"}{rest && " · incl. 1 rest"}</span>
     </span>
   );
 }

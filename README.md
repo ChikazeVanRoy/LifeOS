@@ -34,7 +34,7 @@ If the project sits in an iCloud-synced folder such as Documents, iCloud can mov
 - **Add anything later:** New Goal has templates for languages, creative work, fitness, reading and learning, plus a fully custom option with your own metrics and measurements.
 - **Log from anywhere:** press `N`, or use the gradient button. Type a sentence like "Read 25 pages", or tap through the form.
 - **Timers** survive refreshes. Stop one and the log sheet opens with the duration filled in.
-- **Rest:** set rest days or planned breaks on a goal page or in Settings. They never break a streak, and weekly targets shrink to fit.
+- **Rest:** set rest days or planned breaks on a goal page or in Settings. They never break a streak, and weekly targets shrink to fit. Each daily streak also forgives one missed day, shown as "includes 1 day rest".
 
 ## Your data
 

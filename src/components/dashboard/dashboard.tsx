@@ -51,6 +51,8 @@ function Hero({ d, name }: { d: Derived; name: string }) {
   // On a day with nothing scheduled, every goal still counts if you choose to work on it.
   const pool = due.length ? due : d.goals;
   const poolDone = pool.filter((g) => g.doneToday).length;
+  const left = pool.filter((g) => !g.doneToday);
+  const allDone = pool.length > 0 && left.length === 0;
   const todayMinutes = d.goals.reduce((sum, g) => sum + g.todayMinutes, 0);
   const weekDone = d.goals.reduce((s, g) => s + Math.min(g.week.done, g.week.required), 0);
   const weekRequired = d.goals.reduce((s, g) => s + g.week.required, 0);
@@ -73,13 +75,17 @@ function Hero({ d, name }: { d: Derived; name: string }) {
       <div className="relative mt-5 grid grid-cols-2 gap-x-3 gap-y-5 md:mt-6 md:grid-cols-[1.25fr_1fr_1.1fr] md:gap-4">
         <Link href="/activity" className="col-span-2 flex items-center gap-4 md:col-span-1">
           <Ring value={pool.length ? poolDone / pool.length : 0} size={compact ? 84 : 108} stroke={compact ? 8 : 9} gradient label={`${poolDone} of ${pool.length} goals done today`}>
-            <span className="eyebrow !text-[9px]">Today</span>
+            <span className="eyebrow !text-[9px]">Goals</span>
             <span className="font-display num -mt-0.5 text-[30px] leading-none font-medium md:text-[40px]">{poolDone}<span className="text-muted-foreground">/{pool.length}</span></span>
           </Ring>
           <div className="min-w-0">
-            <p className="text-[15px] font-medium">{fmtHours(todayMinutes)} today</p>
-            <p className="num text-sm text-muted-foreground">{fmtHours(d.totals.minutes)} in total</p>
-            <p className="num mt-1 text-xs text-muted-foreground">{plural(d.totals.activeDays, "active day")}</p>
+            <p className="text-[15px] font-medium">
+              {pool.length === 0 ? "No goals yet" : allDone ? "All done today" : `${poolDone} of ${pool.length} ${due.length ? "due " : ""}goals done`}
+            </p>
+            <p className="max-w-56 truncate text-sm text-muted-foreground">
+              {pool.length === 0 ? "Add one to get started." : allDone ? `${fmtHours(todayMinutes)} logged today.` : `Left: ${left.map((g) => g.goal.name).join(", ")}`}
+            </p>
+            <p className="num mt-1 text-xs text-muted-foreground">{fmtHours(todayMinutes)} today · {fmtHours(d.totals.minutes)} total · {plural(d.totals.activeDays, "active day")}</p>
           </div>
         </Link>
 
@@ -90,7 +96,7 @@ function Hero({ d, name }: { d: Derived; name: string }) {
               <AnimatedNumber value={streak.current} className="font-display text-[30px] leading-none font-medium md:text-[40px]" />
               <span className="text-sm text-muted-foreground">{streak.current === 1 ? "day" : "days"}</span>
             </p>
-            <p className="num mt-1 text-xs text-muted-foreground">Life streak · best {streak.longest}</p>
+            <p className="num mt-1 text-xs text-muted-foreground" title="Days you showed up for something. A quiet day only breaks it if a goal needed you that day: scheduled days, or the last days of a week when a weekly target is still short. One missed day per streak is forgiven.">Life streak · best {streak.longest}</p>
             <p className="num mt-0.5 hidden text-xs text-muted-foreground md:block">{due.length ? `${dueDone} of ${due.length} due today` : "Nothing due today"}</p>
           </div>
         </div>

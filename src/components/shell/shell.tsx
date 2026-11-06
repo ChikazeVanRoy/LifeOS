@@ -81,11 +81,11 @@ function Sidebar() {
           <NotebookPen size={18} strokeWidth={1.8} /> Weekly review
         </Link>
       </nav>
-      <Link href="/achievements" className="mt-auto flex items-center gap-3 rounded-2xl p-2 transition-colors hover:bg-secondary">
+      <Link href="/achievements" title="Days you showed up for something. A quiet day only breaks it if a goal needed you that day: scheduled days, or the last days of a week when a weekly target is still short. One missed day per streak is forgiven." className="mt-auto flex items-center gap-3 rounded-2xl p-2 transition-colors hover:bg-secondary">
         <span className="grid size-11 place-items-center"><FlameIcon size={30} lit={d.overallStreak.current > 0} /></span>
         <span className="min-w-0">
           <span className="num block truncate text-sm font-medium">{plural(d.overallStreak.current, "day")}</span>
-          <span className="block text-xs text-muted-foreground">Life streak</span>
+          <span className="block text-xs text-muted-foreground">Life streak{d.overallStreak.currentForgiven > 0 && " · incl. 1 rest day"}</span>
         </span>
       </Link>
       <Link href="/settings" className="num mt-2 px-2 text-[11px] text-muted-foreground hover:text-foreground">v{process.env.NEXT_PUBLIC_APP_VERSION}</Link>

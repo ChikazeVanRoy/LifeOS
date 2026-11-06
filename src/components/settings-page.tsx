@@ -222,7 +222,7 @@ export function SettingsPage() {
           </div>
         </Group>
 
-        <Group title="Rest" description="Planned breaks never break a streak. Weekly targets shrink to fit.">
+        <Group title="Rest" description="Planned breaks never break a streak. Weekly targets shrink to fit. On top of that, one missed day per streak is forgiven.">
           <Rests />
         </Group>
 

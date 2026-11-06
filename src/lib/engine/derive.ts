@@ -232,7 +232,7 @@ export const derive = (data: AppData, now: Date = new Date()): Derived => {
     new Set(logs.map((l) => l.date)),
     views
       .filter((v) => !v.goal.archived && v.totals.firstDate)
-      .map((v) => ({ schedules: v.goal.schedules, pauses: v.pauses, since: minDate(v.goal.createdAt, v.totals.firstDate!) })),
+      .map((v) => ({ schedules: v.goal.schedules, pauses: v.pauses, since: minDate(v.goal.createdAt, v.totals.firstDate!), sessions: v.sessionsByDay, weekStartsOn })),
     today,
   );
 
