@@ -261,7 +261,9 @@ export const useStore = create<State>()((set, get) => {
       update((d) => ({
         ...d,
         roadmaps: d.roadmaps.filter((r) => r.id !== id),
-        milestones: d.milestones.filter((m) => m.roadmapId !== id),
+        // A step that also belongs to a goal stays with the goal.
+        goals: d.goals.map((g) => (g.roadmapId === id ? { ...g, roadmapId: null } : g)),
+        milestones: d.milestones.flatMap((m) => (m.roadmapId !== id ? [m] : m.goalId ? [{ ...m, roadmapId: null }] : [])),
       })),
 
     addPause: (p) => update((d) => ({ ...d, pauses: [...d.pauses, { ...p, id: uid() }] })),

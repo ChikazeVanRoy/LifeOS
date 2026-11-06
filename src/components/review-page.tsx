@@ -4,6 +4,7 @@ import { ArrowDownRight, ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight, Co
 import { motion } from "motion/react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { milestoneDetail } from "@/components/dashboard/dashboard";
 import { useDerived } from "@/components/shell/providers";
 import { Icon } from "@/components/viz/icons";
 import { Bar, FlameIcon, goalVar, GoalBadge } from "@/components/viz/primitives";
@@ -101,6 +102,25 @@ export function ReviewPage() {
             {r.strengthPRs.map((p, i) => <li key={i} className="flex items-center gap-2.5"><Trophy size={16} className="shrink-0 text-muted-foreground" /> <span>{p.exercise} record: <b className="num font-medium">{p.kg} {d.weightUnit} × {p.reps}</b></span></li>)}
             {r.records.slice(0, 5).map((e, i) => <li key={i} className="flex items-center gap-2.5"><Trophy size={16} className="shrink-0 text-muted-foreground" /> <span>{e.goal.name}: {e.label.toLowerCase()}, <b className="num font-medium">{e.unit === "min" ? fmtDuration(e.value) : `${fmtNum(e.value)} ${e.unit}`}</b></span></li>)}
           </ul>
+        </motion.section>
+      )}
+
+      {r.roadmaps.length > 0 && (
+        <motion.section variants={rise} className="card p-5">
+          <h2 className="font-display mb-3 text-[19px] font-medium">Long-term roadmaps</h2>
+          <div className="space-y-4">
+            {r.roadmaps.map(({ roadmap, minutes, reached }) => (
+              <div key={roadmap.id} style={goalVar(roadmap.color)}>
+                <div className="mb-1.5 flex items-baseline justify-between gap-2 text-sm">
+                  <span className="truncate font-medium">{roadmap.title}</span>
+                  <span className="num shrink-0 text-xs text-muted-foreground">{minutes > 0 ? `${fmtHours(minutes)} this week · ` : ""}{Math.round(roadmap.progress * 100)}% there</span>
+                </div>
+                <Bar value={roadmap.progress} />
+                {reached.length > 0 && <p className="mt-1.5 text-xs text-muted-foreground">Reached {reached.map((m) => m.title).join(", ")}</p>}
+                {roadmap.next && <p className="mt-1.5 text-xs text-muted-foreground">Next: {roadmap.next.title}{milestoneDetail(roadmap.next) ? ` (${milestoneDetail(roadmap.next)})` : ""}</p>}
+              </div>
+            ))}
+          </div>
         </motion.section>
       )}
 

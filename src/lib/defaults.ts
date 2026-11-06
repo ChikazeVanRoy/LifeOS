@@ -43,6 +43,7 @@ interface GoalOptions {
   order?: number;
   focus?: CreativeFocus;
   weightUnit?: WeightUnit;
+  roadmapId?: string | null;
 }
 
 const TEMPLATES: Record<GoalKind, (o: GoalOptions) => Partial<Goal>> = {
@@ -114,6 +115,7 @@ export const createGoal = (kind: GoalKind, today: ISODate, options: GoalOptions 
     icon: t.icon ?? "target",
     color: options.color ?? t.color ?? "rose",
     order: options.order ?? 0,
+    ...(options.roadmapId ? { roadmapId: options.roadmapId } : {}),
     createdAt: today,
     schedules: (t.schedules ?? []).map((e) => ({ ...e, from: today })),
   };

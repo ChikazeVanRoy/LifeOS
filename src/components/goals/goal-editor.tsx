@@ -86,6 +86,8 @@ interface EditorProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   isNew?: boolean;
+  /** Called with the goal right after it is created. */
+  onCreated?: (goal: Goal) => void;
 }
 
 /** Keyed so each opening starts from the saved goal. */
@@ -94,7 +96,8 @@ export function GoalEditor(props: EditorProps) {
   return <Editor key={`${props.goal.id}-${props.open}`} {...props} goal={props.goal} />;
 }
 
-function Editor({ goal, open, onOpenChange, isNew }: EditorProps & { goal: Goal }) {
+function Editor({ goal, open, onOpenChange, isNew, onCreated }: EditorProps & { goal: Goal }) {
+  const roadmaps = useStore((s) => s.data.roadmaps).filter((r) => !r.archived);
   const { addGoal, updateGoal, setSchedule, deleteGoal } = useStore.getState();
   const router = useRouter();
   const [draft, setDraft] = useState<Goal>(goal);
@@ -117,6 +120,7 @@ function Editor({ goal, open, onOpenChange, isNew }: EditorProps & { goal: Goal 
       name: nameTouched ? draft.name : undefined,
       color: nextColor(goals),
       weightUnit: settings.weightUnit,
+      roadmapId: draft.roadmapId,
     });
     setDraft(next);
     setScheduleDraft(currentSchedule(next));
@@ -132,7 +136,9 @@ function Editor({ goal, open, onOpenChange, isNew }: EditorProps & { goal: Goal 
     const measurement = draft.measurement?.label.trim() ? draft.measurement : undefined;
     if (isNew) {
       // A new goal is only a draft until this point, so cancelling leaves nothing behind.
-      addGoal({ ...draft, measurement, name: draft.name.trim(), schedules: [{ from: draft.createdAt, schedule }] });
+      const created = { ...draft, measurement, name: draft.name.trim(), schedules: [{ from: draft.createdAt, schedule }] };
+      addGoal(created);
+      onCreated?.(created);
       onOpenChange(false);
       return;
     }
@@ -280,6 +286,15 @@ function Editor({ goal, open, onOpenChange, isNew }: EditorProps & { goal: Goal 
                 </div>
               )}
             </Field>
+
+            {roadmaps.length > 0 && (
+              <Field label="Long-term roadmap" hint="The big picture this goal works towards. Its steps can follow this goal's activity.">
+                <select aria-label="Long-term roadmap" value={draft.roadmapId ?? ""} onChange={(e) => set({ roadmapId: e.target.value || null })} className="h-10 w-full rounded-xl border bg-transparent px-3 text-sm">
+                  <option value="">None</option>
+                  {roadmaps.map((r) => <option key={r.id} value={r.id}>{r.title}</option>)}
+                </select>
+              </Field>
+            )}
 
             {draft.kind === "career" && (
               <label className="flex items-center justify-between gap-3 text-sm">

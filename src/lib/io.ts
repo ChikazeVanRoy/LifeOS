@@ -38,6 +38,7 @@ const goal = z.object({
   measurement: z.object({ id: z.string(), label: z.string(), unit: z.string(), target: z.number().optional() }).optional(),
   proficiency: z.object({ current: z.string(), target: z.string() }).optional(),
   trackApplications: z.boolean().optional(),
+  roadmapId: z.string().nullable().optional(),
 });
 
 const log = z.object({

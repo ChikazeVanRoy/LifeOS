@@ -7,7 +7,7 @@ import type { GoalView } from "@/lib/engine/derive";
 import { fmtWeekday } from "@/lib/engine/dates";
 import { useUI } from "@/lib/ui";
 import { cn, fmtHours } from "@/lib/utils";
-import { goalVar, GoalBadge, Ring, StreakPill, WEEK_DOT } from "./viz/primitives";
+import { Bar, goalVar, GoalBadge, Ring, StreakPill, WEEK_DOT } from "./viz/primitives";
 
 export function WeekDots({ view, today }: { view: GoalView; today: string }) {
   return (
@@ -66,6 +66,15 @@ export function GoalCard({ view, today }: { view: GoalView; today: string }) {
       <div className="pointer-events-none relative z-10">
         <WeekDots view={view} today={today} />
       </div>
+      {view.roadmap && (
+        <div className="pointer-events-none relative z-10" title={view.roadmap.next ? `Next: ${view.roadmap.next.title}` : undefined}>
+          <div className="mb-1 flex items-baseline justify-between gap-2 text-xs text-muted-foreground">
+            <span className="truncate">{view.roadmap.title}</span>
+            <span className="num shrink-0">{Math.round(view.roadmap.progress * 100)}%</span>
+          </div>
+          <Bar value={view.roadmap.progress} height={4} />
+        </div>
+      )}
       <div className="pointer-events-none relative z-10 flex items-center justify-between gap-3 text-sm">
         <StreakPill current={streak.current} unit={streak.unit} />
         <span className="num truncate text-xs text-muted-foreground">{weekLabel(view)}</span>

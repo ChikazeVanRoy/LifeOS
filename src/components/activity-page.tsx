@@ -10,7 +10,7 @@ import { Empty, PageHeader } from "@/components/viz/primitives";
 import { addDays, addMonths, endOfMonth, fmtMonthLong, fmtRelative, startOfMonth, startOfWeek } from "@/lib/engine/dates";
 import { cn, fmtHours, fmtNum, plural } from "@/lib/utils";
 
-const PAGE = 40;
+const PAGE = 10;
 
 function MonthCalendar({ month, setMonth, selected, onSelect, goalId }: { month: string; setMonth: (m: string) => void; selected: string | null; onSelect: (d: string) => void; goalId: string | null }) {
   const d = useDerived();
@@ -132,13 +132,16 @@ export function ActivityPage() {
         <Heatmap values={view?.effortByDay ?? d.effortByDay} today={d.today} weekStartsOn={d.weekStartsOn} color={view ? `var(--c-${view.goal.color})` : "var(--c-violet)"} year={year ?? undefined} onSelect={select} selected={selected} bands={view ? undefined : OVERALL_BANDS} />
       </section>
 
-      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-5 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-5 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
         <MonthCalendar month={month} setMonth={setMonth} selected={selected} onSelect={select} goalId={goalId} />
-        <section className="card p-3 md:p-4">
+        {/* On wide screens the card is as tall as the calendar and scrolls inside, so a long history never stretches the page. */}
+        <section className="card relative p-3 md:p-4">
+          <div className="flex flex-col md:absolute md:inset-4 md:min-h-0">
           <div className="flex items-center justify-between px-2 pt-1 pb-1">
             <h2 className="font-display text-[19px] font-medium">History</h2>
             {selected && <button onClick={() => setSelected(null)} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">{fmtRelative(selected, d.today)} <X size={12} /></button>}
           </div>
+          <div className="md:min-h-0 md:flex-1 md:overflow-y-auto">
           {groups.length === 0 ? (
             <Empty icon="calendar" title={selected ? "Nothing logged that day" : "No activity yet"}>{selected ? "Backdate an entry from the log sheet if you missed it." : "Your history will build here."}</Empty>
           ) : (
@@ -155,6 +158,8 @@ export function ActivityPage() {
           {logs.length > limit && (
             <button onClick={() => setLimit((n) => n + PAGE)} className="mt-2 h-10 w-full rounded-xl text-sm text-muted-foreground hover:bg-secondary">Show more ({fmtNum(logs.length - limit)} older)</button>
           )}
+          </div>
+          </div>
         </section>
       </div>
     </div>

@@ -48,6 +48,8 @@ export interface Goal {
   archived: boolean;
   createdAt: ISODate;
   description?: string;
+  /** The long-term roadmap this goal works towards, if any. */
+  roadmapId?: string | null;
   schedules: ScheduleEpoch[];
   /** Optional weekly time target, in minutes. */
   weeklyMinutes?: number;

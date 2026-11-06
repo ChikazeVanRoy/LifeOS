@@ -193,10 +193,11 @@ function Upcoming({ d }: { d: Derived }) {
         <div className="space-y-3.5">
           {list.map((m) => {
             const goal = d.byId.get(m.goalId!)?.goal;
+            const roadmap = d.roadmaps.find((r) => r.id === m.roadmapId);
             return (
               <div key={m.id} style={goal ? goalVar(goal.color) : undefined}>
                 <div className="mb-1.5 flex items-baseline justify-between gap-3 text-sm">
-                  <span className="flex min-w-0 items-center gap-1.5 truncate"><Flag size={13} style={{ color: "var(--goal)" }} className="shrink-0" /> <span className="truncate">{m.title}</span></span>
+                  <span className="flex min-w-0 items-center gap-1.5 truncate"><Flag size={13} style={{ color: "var(--goal)" }} className="shrink-0" /> <span className="truncate">{m.title}</span>{roadmap && <span className="shrink-0 truncate text-xs text-muted-foreground">· {roadmap.title}</span>}</span>
                   <span className="num shrink-0 text-xs text-muted-foreground">{milestoneDetail(m)}</span>
                 </div>
                 <Bar value={m.progress ?? 0} />
@@ -205,6 +206,31 @@ function Upcoming({ d }: { d: Derived }) {
           })}
         </div>
       )}
+    </section>
+  );
+}
+
+/** Long-term roadmaps, moved by the goals that work towards them. */
+function Roadmaps({ d }: { d: Derived }) {
+  if (d.roadmaps.length === 0) return null;
+  return (
+    <section className="card p-5 md:col-span-2">
+      <SectionTitle title="Long-term roadmaps" className="px-0" action={<Link href="/goals" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">All <ArrowRight size={12} /></Link>} />
+      <div className="grid gap-x-8 gap-y-4 md:grid-cols-2">
+        {d.roadmaps.map((r) => (
+          <div key={r.id} style={goalVar(r.color)}>
+            <div className="mb-1.5 flex items-baseline justify-between gap-3 text-sm">
+              <span className="truncate font-medium">{r.title}</span>
+              <span className="num shrink-0 text-xs text-muted-foreground">{Math.round(r.progress * 100)}%</span>
+            </div>
+            <Bar value={r.progress} />
+            <p className="mt-1.5 truncate text-xs text-muted-foreground">
+              {r.next ? `Next: ${r.next.title}${milestoneDetail(r.next) ? ` (${milestoneDetail(r.next)})` : ""}` : r.milestones.length ? "Every step reached." : "No steps yet."}
+              {r.goals.length > 0 && ` · ${r.goals.map((g) => g.goal.name).join(", ")}`}
+            </p>
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
@@ -295,6 +321,7 @@ export function Dashboard() {
         <Upcoming d={d} />
         <Recent d={d} />
         <Insights d={d} />
+        <Roadmaps d={d} />
       </motion.div>
 
       <motion.div variants={rise}>

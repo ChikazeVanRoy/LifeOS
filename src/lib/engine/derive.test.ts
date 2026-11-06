@@ -111,6 +111,25 @@ describe("derived state follows the log", () => {
     expect(m?.completedOn).toBeNull();
   });
 
+  it("moves a roadmap from the activity of the goals tied to it", () => {
+    const d = fresh();
+    d.roadmaps.push({ id: "r", title: "Get fit", icon: "mountain", color: "lime", order: 0 });
+    d.goals.find((g) => g.id === "fitness")!.roadmapId = "r";
+    d.milestones.push(
+      { id: "hrs", goalId: "fitness", roadmapId: "r", title: "10 hours", auto: { metric: "hours", target: 10 }, order: 0 },
+      { id: "man", goalId: null, roadmapId: "r", title: "Sign up", order: 1 },
+    );
+    d.logs.push(log("fitness", "2026-03-02", 300));
+    const v = derive(d, now);
+    const r = v.roadmaps[0];
+    expect(r.progress).toBeCloseTo(0.25);
+    expect(r.next?.id).toBe("hrs");
+    expect(r.goals.map((g) => g.goal.id)).toEqual(["fitness"]);
+    expect(v.byId.get("fitness")?.roadmap?.id).toBe("r");
+    const week = buildReview(v, today);
+    expect(week.roadmaps[0].minutes).toBe(300);
+  });
+
   it("counts a strength PR only against an earlier best", () => {
     const d = fresh();
     const lift = (date: string, kg: number) => log("fitness", date, 60, {}, { exercises: [{ exercise: "Squat", sets: 3, reps: 5, kg }] });

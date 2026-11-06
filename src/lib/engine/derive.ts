@@ -26,8 +26,28 @@ export interface MilestoneView extends Milestone {
   unit: string | null;
 }
 
+/** What a goal needs to know about the roadmap it belongs to. */
+export interface GoalRoadmap {
+  id: string;
+  title: string;
+  color: Roadmap["color"];
+  icon: string;
+  progress: number;
+  /** The first step not reached yet, preferring one with a measurable target. */
+  next: MilestoneView | null;
+}
+
+export type RoadmapView = Roadmap & {
+  milestones: MilestoneView[];
+  progress: number;
+  next: MilestoneView | null;
+  /** Goals that work towards it: linked directly, or through one of its steps. */
+  goals: GoalView[];
+};
+
 export interface GoalView {
   goal: Goal;
+  roadmap: GoalRoadmap | null;
   schedule: Schedule;
   logs: LogEntry[];
   totals: Totals;
@@ -66,7 +86,7 @@ export interface Derived {
   overallStreak: StreakResult;
   achievements: AchievementState[];
   milestones: MilestoneView[];
-  roadmaps: (Roadmap & { milestones: MilestoneView[]; progress: number })[];
+  roadmaps: RoadmapView[];
   effortByDay: Map<ISODate, number>;
   applications: JobApplication[];
 }
@@ -160,6 +180,7 @@ export const derive = (data: AppData, now: Date = new Date()): Derived => {
 
       return {
         goal,
+        roadmap: null,
         schedule: currentSchedule(goal),
         logs: goalLogs,
         totals: totalsOf(goalLogs),
@@ -195,9 +216,16 @@ export const derive = (data: AppData, now: Date = new Date()): Derived => {
         .filter((m) => m.roadmapId === r.id)
         .sort((a, b) => a.order - b.order)
         .map((m) => allMilestones.find((x) => x.id === m.id) ?? viewMilestone(m, [], [], [], undefined));
-      const done = ms.filter((m) => m.completedOn).length;
-      return { ...r, milestones: ms, progress: ms.length ? done / ms.length : 0 };
+      // Steps with a target count by how far along they are, so logging moves the roadmap.
+      const sum = ms.reduce((t, m) => t + (m.completedOn ? 1 : (m.progress ?? 0)), 0);
+      const open = ms.filter((m) => !m.completedOn);
+      const next = open.find((m) => m.auto) ?? open[0] ?? null;
+      const linked = views.filter((v) => v.goal.roadmapId === r.id || ms.some((m) => m.goalId === v.goal.id));
+      return { ...r, milestones: ms, progress: ms.length ? sum / ms.length : 0, next, goals: linked };
     });
+  for (const r of roadmapViews) {
+    for (const g of r.goals) g.roadmap = { id: r.id, title: r.title, color: r.color, icon: r.icon, progress: r.progress, next: r.next };
+  }
   const everyMilestone = [...allMilestones, ...roadmapViews.flatMap((r) => r.milestones).filter((m) => !allMilestones.some((x) => x.id === m.id))];
 
   const overallStreak = computeOverallStreak(

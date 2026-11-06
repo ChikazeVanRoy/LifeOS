@@ -1,6 +1,6 @@
 import type { Goal, ISODate } from "../types";
 import { addDays, diffDays, endOfWeek, startOfWeek } from "./dates";
-import type { Derived, GoalView } from "./derive";
+import type { Derived, GoalView, MilestoneView, RoadmapView } from "./derive";
 import type { AchievementState } from "./achievements";
 import type { RecordEvent, StrengthPR } from "./records";
 import { inRange, totalsOf, type Totals } from "./stats";
@@ -16,6 +16,13 @@ export interface GoalWeek {
   streakKept: boolean;
 }
 
+export interface RoadmapWeek {
+  roadmap: RoadmapView;
+  minutes: number;
+  /** Steps reached this week. */
+  reached: MilestoneView[];
+}
+
 export interface WeekReview {
   start: ISODate;
   end: ISODate;
@@ -29,6 +36,8 @@ export interface WeekReview {
   achievements: AchievementState[];
   milestones: Derived["milestones"];
   quieter: GoalWeek[];
+  /** Roadmaps that got time from their goals, or reached a step, this week. */
+  roadmaps: RoadmapWeek[];
   headline: string;
   note: string;
   /** How the comparison figures are labelled. */
@@ -81,6 +90,13 @@ export const buildReview = (d: Derived, anyDayInWeek: ISODate): WeekReview => {
     return g.now.sessions === 0 || (g.average > 30 && g.now.minutes < g.average * 0.5);
   });
   const streaksKept = goals.filter((g) => g.streakKept);
+  const roadmaps: RoadmapWeek[] = d.roadmaps
+    .map((roadmap) => ({
+      roadmap,
+      minutes: roadmap.goals.reduce((t, g) => t + totalsOf(inRange(g.logs, start, end)).minutes, 0),
+      reached: roadmap.milestones.filter((m) => within(m.completedOn)),
+    }))
+    .filter((r) => r.minutes > 0 || r.reached.length > 0);
 
   let headline: string;
   let note: string;
@@ -110,11 +126,13 @@ export const buildReview = (d: Derived, anyDayInWeek: ISODate): WeekReview => {
     .filter((m) => !m.completedOn && m.progress !== null && m.progress > 0 && m.goalId)
     .sort((a, b) => (b.progress ?? 0) - (a.progress ?? 0))[0];
   if (closest) priorities.push({ goalId: closest.goalId, text: `Keep pushing towards "${closest.title}". You are ${Math.round((closest.progress ?? 0) * 100)}% of the way.` });
+  const stalled = d.roadmaps.find((r) => r.next && r.goals.length > 0 && !roadmaps.some((x) => x.roadmap.id === r.id));
+  if (stalled && !isCurrent) priorities.push({ goalId: stalled.goals[0].goal.id, text: `Nothing moved ${stalled.title} this week. Its next step is "${stalled.next!.title}".` });
   const strongest = [...goals].sort((a, b) => b.view.streak.current - a.view.streak.current)[0];
   if (strongest && strongest.view.streak.current >= 2) {
     priorities.push({ goalId: strongest.view.goal.id, text: `Protect your ${strongest.view.goal.name} streak of ${plural(strongest.view.streak.current, strongest.view.streak.unit)}.` });
   }
   if (priorities.length === 0) priorities.push({ goalId: null, text: "Pick one goal that matters most next week and give it the first hour." });
 
-  return { start, end, isCurrent, totals, previous, goals, streaksKept, records, strengthPRs, achievements, milestones, quieter, headline, note, compareLabel: isCurrent ? "this point last week" : "last week", priorities: priorities.slice(0, 3) };
+  return { start, end, isCurrent, totals, previous, goals, streaksKept, records, strengthPRs, achievements, milestones, quieter, roadmaps, headline, note, compareLabel: isCurrent ? "this point last week" : "last week", priorities: priorities.slice(0, 3) };
 };
