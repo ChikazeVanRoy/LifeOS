@@ -12,6 +12,7 @@ import {
   weekMarks,
   weekProgress,
   isPaused,
+  owedOn,
   type DayMark,
   type PauseRange,
   type StreakResult,
@@ -64,6 +65,8 @@ export interface GoalView {
   todayMinutes: number;
   doneToday: boolean;
   dueToday: boolean;
+  /** Whether this goal needs something today: a scheduled day, or a weekly target with no slack left. */
+  neededToday: boolean;
   pausedToday: boolean;
   projects: Project[];
   measurements: Measurement[];
@@ -197,6 +200,7 @@ export const derive = (data: AppData, now: Date = new Date()): Derived => {
         doneToday: (sessionsByDay.get(today) ?? 0) > 0,
         dueToday: !pausedToday && sched.kind === "days" && sched.days.includes(weekday(today)),
         pausedToday,
+        neededToday: !goal.archived && owedOn({ schedules: goal.schedules, pauses, since, sessions: sessionsByDay, weekStartsOn }, today),
         projects,
         measurements,
         milestones,

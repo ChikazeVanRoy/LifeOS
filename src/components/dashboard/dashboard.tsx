@@ -43,16 +43,54 @@ function WeekRings({ goals, compact }: { goals: GoalView[]; compact: boolean }) 
   );
 }
 
+/** One arc per goal. Filled once it's logged today; outlined while it's still needed; faint when today is free. */
+function GoalSegments({ goals, size, stroke, children }: { goals: GoalView[]; size: number; stroke: number; children: React.ReactNode }) {
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const n = Math.max(1, goals.length);
+  const gap = n > 1 ? Math.min(8, c / n / 4) : 0;
+  const seg = c / n;
+  const label = goals.length
+    ? `Today: ${goals.map((g) => `${g.goal.name} ${g.doneToday ? "logged" : g.neededToday ? "still needed" : "not needed today"}`).join(", ")}`
+    : "No goals";
+  return (
+    <div className="relative inline-grid shrink-0 place-items-center" style={{ width: size, height: size }} role="img" aria-label={label}>
+      <svg width={size} height={size} className="absolute inset-0 -rotate-90" aria-hidden>
+        {goals.length === 0 && <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--track)" strokeWidth={stroke} />}
+        {goals.map((g, i) => {
+          const color = `var(--c-${g.goal.color})`;
+          const done = g.doneToday;
+          const needed = g.neededToday;
+          return (
+            <circle
+              key={g.goal.id}
+              cx={size / 2}
+              cy={size / 2}
+              r={r}
+              fill="none"
+              stroke={done ? color : needed ? `color-mix(in oklch, ${color} 45%, transparent)` : "var(--track)"}
+              strokeWidth={stroke}
+              strokeLinecap="round"
+              strokeDasharray={`${Math.max(1, seg - gap)} ${c - Math.max(1, seg - gap)}`}
+              strokeDashoffset={-i * seg}
+            />
+          );
+        })}
+      </svg>
+      <div className="relative flex flex-col items-center">{children}</div>
+    </div>
+  );
+}
+
 function Hero({ d, name }: { d: Derived; name: string }) {
   const hour = Number(localParts(d.tz).time.slice(0, 2));
   const insights = useMemo(() => buildInsights(d), [d]);
-  const due = d.goals.filter((g) => g.dueToday);
-  const dueDone = due.filter((g) => g.doneToday).length;
-  // On a day with nothing scheduled, every goal still counts if you choose to work on it.
-  const pool = due.length ? due : d.goals;
-  const poolDone = pool.filter((g) => g.doneToday).length;
-  const left = pool.filter((g) => !g.doneToday);
-  const allDone = pool.length > 0 && left.length === 0;
+  const needed = d.goals.filter((g) => g.neededToday);
+  const neededDone = needed.filter((g) => g.doneToday).length;
+  const left = needed.filter((g) => !g.doneToday);
+  const doneCount = d.goals.filter((g) => g.doneToday).length;
+  // Weekly goals that aren't needed today but still have sessions to go this week.
+  const alsoOpen = d.goals.filter((g) => !g.neededToday && !g.week.met && g.week.required > 0 && g.schedule.kind === "weekly");
   const todayMinutes = d.goals.reduce((sum, g) => sum + g.todayMinutes, 0);
   const weekDone = d.goals.reduce((s, g) => s + Math.min(g.week.done, g.week.required), 0);
   const weekRequired = d.goals.reduce((s, g) => s + g.week.required, 0);
@@ -74,16 +112,16 @@ function Hero({ d, name }: { d: Derived; name: string }) {
 
       <div className="relative mt-5 grid grid-cols-2 gap-x-3 gap-y-5 md:mt-6 md:grid-cols-[1.25fr_1fr_1.1fr] md:gap-4">
         <Link href="/activity" className="col-span-2 flex items-center gap-4 md:col-span-1">
-          <Ring value={pool.length ? poolDone / pool.length : 0} size={compact ? 84 : 108} stroke={compact ? 8 : 9} gradient label={`${poolDone} of ${pool.length} goals done today`}>
-            <span className="eyebrow !text-[9px]">Goals</span>
-            <span className="font-display num -mt-0.5 text-[30px] leading-none font-medium md:text-[40px]">{poolDone}<span className="text-muted-foreground">/{pool.length}</span></span>
-          </Ring>
+          <GoalSegments goals={d.goals} size={compact ? 84 : 108} stroke={compact ? 8 : 9}>
+            <span className="eyebrow !text-[9px]">Logged</span>
+            <span className="font-display num -mt-0.5 text-[30px] leading-none font-medium md:text-[40px]">{doneCount}</span>
+          </GoalSegments>
           <div className="min-w-0">
             <p className="text-[15px] font-medium">
-              {pool.length === 0 ? "No goals yet" : allDone ? "All done today" : `${poolDone} of ${pool.length} ${due.length ? "due " : ""}goals done`}
+              {d.goals.length === 0 ? "No goals yet" : left.length > 0 ? `${left.length} still needed today` : needed.length > 0 ? "Everything needed is done" : "Nothing required today"}
             </p>
             <p className="max-w-56 truncate text-sm text-muted-foreground">
-              {pool.length === 0 ? "Add one to get started." : allDone ? `${fmtHours(todayMinutes)} logged today.` : `Left: ${left.map((g) => g.goal.name).join(", ")}`}
+              {d.goals.length === 0 ? "Add one to get started." : left.length > 0 ? left.map((g) => g.goal.name).join(", ") : alsoOpen.length > 0 ? `Still open this week: ${alsoOpen.map((g) => g.goal.name).join(", ")}` : "Anything you log still counts."}
             </p>
             <p className="num mt-1 text-xs text-muted-foreground">{fmtHours(todayMinutes)} today · {fmtHours(d.totals.minutes)} total · {plural(d.totals.activeDays, "active day")}</p>
           </div>
@@ -97,7 +135,7 @@ function Hero({ d, name }: { d: Derived; name: string }) {
               <span className="text-sm text-muted-foreground">{streak.current === 1 ? "day" : "days"}</span>
             </p>
             <p className="num mt-1 text-xs text-muted-foreground" title="Days in a row you kept up with every goal. A goal needs you on its scheduled days, or on the last days of a week when its weekly target is still short. Each goal can miss one day per streak; a second miss ends it.">Life streak · best {streak.longest}</p>
-            <p className="num mt-0.5 hidden text-xs text-muted-foreground md:block">{due.length ? `${dueDone} of ${due.length} due today` : "Nothing due today"}</p>
+            <p className="num mt-0.5 hidden text-xs text-muted-foreground md:block">{needed.length ? `${neededDone} of ${needed.length} needed today` : "Nothing needed today"}</p>
           </div>
         </div>
 
