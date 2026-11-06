@@ -252,6 +252,12 @@ describe("week view", () => {
     expect([p.done, p.required, p.met, p.daysLeft]).toEqual([2, 3, false, 3]);
   });
 
+  it("counts two sessions on one day once towards the week", () => {
+    const m = new Map([["2026-03-02", 2], ["2026-03-04", 1]]);
+    const p = weekProgress(ep({ kind: "weekly", sessions: 3 }), m, [], "2026-03-05", 1);
+    expect(p.done).toBe(2);
+  });
+
   it("does not expect days before a goal began", () => {
     const every = ep(daily, "2026-03-04");
     const p = weekProgress(every, on(), [], "2026-03-04", 1, "2026-03-04");

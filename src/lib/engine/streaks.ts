@@ -148,7 +148,8 @@ export const buildPeriods = ({ schedules, sessions, pauses, today, weekStartsOn 
         if (!inSegment || !beforeNextEpoch) continue;
         if (!isPaused(d, pauses)) available++;
         const n = d <= today ? sessions.get(d) ?? 0 : 0;
-        count += n;
+        // Two sessions on one day still count as one towards a weekly target.
+        count += Math.min(n, 1);
         if (n > 0) activeDays++;
       }
       // A week cut short by a start date, a schedule change or a planned break asks
@@ -264,7 +265,7 @@ export const owedOn = (g: OverallGoal, d: ISODate): boolean => {
     if (x < g.since || isPaused(x, g.pauses)) continue;
     available++;
     if (x >= d) daysLeft++;
-    else doneBefore += g.sessions?.get(x) ?? 0;
+    else doneBefore += Math.min(g.sessions?.get(x) ?? 0, 1);
   }
   const need = Math.ceil((s.sessions * available) / 7) - doneBefore;
   return need > 0 && need >= daysLeft;
@@ -370,7 +371,7 @@ export const weekProgress = (
     const n = sessions.get(d) ?? 0;
     const paused = isPaused(d, pauses);
     if (!paused && d >= since) unpaused++;
-    if (s.kind === "weekly") done += n;
+    if (s.kind === "weekly") done += Math.min(n, 1);
     else if (s.days.includes(weekday(d)) && !paused && d >= since) {
       required++;
       if (n > 0) done++;
