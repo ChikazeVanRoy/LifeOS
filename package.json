@@ -7,6 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "service:install": "./scripts/install-launch-agent.sh",
+    "service:uninstall": "./scripts/install-launch-agent.sh uninstall",
+    "service:restart": "launchctl kickstart -k gui/$(id -u)/local.lifeos",
+    "service:status": "launchctl print gui/$(id -u)/local.lifeos | grep -E 'state|pid'",
+    "service:logs": "tail -f .lifeos/server.log",
     "test": "vitest run",
     "postinstall": "xattr -w com.apple.fileprovider.ignore#P 1 node_modules 2>/dev/null || true"
   },
