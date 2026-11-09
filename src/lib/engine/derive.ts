@@ -64,8 +64,9 @@ export interface GoalView {
   todayLogs: LogEntry[];
   todayMinutes: number;
   doneToday: boolean;
+  /** A scheduled day for a day-based goal. Weekly goals are never "due"; use `neededToday` for those. */
   dueToday: boolean;
-  /** Whether this goal needs something today: a scheduled day, or a weekly target with no slack left. */
+  /** Whether this goal needs something today: a scheduled day, or a weekly target with no slack left. Drives the dashboard and the Life streak. False when paused or archived. */
   neededToday: boolean;
   pausedToday: boolean;
   projects: Project[];

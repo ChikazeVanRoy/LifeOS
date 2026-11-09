@@ -48,10 +48,14 @@ function GoalSegments({ goals, size, stroke, children }: { goals: GoalView[]; si
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const n = Math.max(1, goals.length);
-  const gap = n > 1 ? Math.min(8, c / n / 4) : 0;
   const seg = c / n;
+  // Round caps stick out half a stroke at each end, so the dash is shortened by a stroke
+  // and the visible gap is whatever space is left between caps.
+  const gap = n > 1 ? Math.min(stroke * 1.5, seg / 2) : 0;
+  const dash = n > 1 ? Math.max(1, seg - gap - stroke) : c;
+  const start = n > 1 ? (gap + stroke) / 2 : 0;
   const label = goals.length
-    ? `Today: ${goals.map((g) => `${g.goal.name} ${g.doneToday ? "logged" : g.neededToday ? "still needed" : "not needed today"}`).join(", ")}`
+    ? `${goals.filter((g) => g.doneToday).length} of ${goals.length} goals logged today: ${goals.map((g) => `${g.goal.name} ${g.doneToday ? "logged" : g.neededToday ? "still needed" : "not needed today"}`).join(", ")}`
     : "No goals";
   return (
     <div className="relative inline-grid shrink-0 place-items-center" style={{ width: size, height: size }} role="img" aria-label={label}>
@@ -71,8 +75,8 @@ function GoalSegments({ goals, size, stroke, children }: { goals: GoalView[]; si
               stroke={done ? color : needed ? `color-mix(in oklch, ${color} 45%, transparent)` : "var(--track)"}
               strokeWidth={stroke}
               strokeLinecap="round"
-              strokeDasharray={`${Math.max(1, seg - gap)} ${c - Math.max(1, seg - gap)}`}
-              strokeDashoffset={-i * seg}
+              strokeDasharray={`${dash} ${c - dash}`}
+              strokeDashoffset={-(i * seg + start)}
             />
           );
         })}
@@ -155,7 +159,7 @@ function Hero({ d, name }: { d: Derived; name: string }) {
 }
 
 /** This week's hours per area of life (all-time totals live on Analytics). Languages share one tile, however many there are. */
-function Lifetime({ d }: { d: Derived }) {
+function WeekHours({ d }: { d: Derived }) {
   const languages = d.goals.filter((g) => g.goal.kind === "language");
   const languageMinutes = languages.reduce((sum, g) => sum + g.weekMinutes, 0);
   const tiles = d.goals.flatMap((g) => {
@@ -343,7 +347,7 @@ export function Dashboard() {
     <motion.div className="space-y-5" variants={stagger} initial="hidden" animate="show">
       <motion.div variants={rise}><Hero d={d} name={name} /></motion.div>
 
-      {!isNew && <Lifetime d={d} />}
+      {!isNew && <WeekHours d={d} />}
 
       <motion.div variants={rise} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {d.goals.map((g) => <GoalCard key={g.goal.id} view={g} today={d.today} />)}

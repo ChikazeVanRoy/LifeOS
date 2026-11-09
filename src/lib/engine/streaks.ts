@@ -284,32 +284,52 @@ export const computeOverallStreak = (
   const sorted = [...activeDates].filter((d) => d <= today).sort();
   if (sorted.length === 0) return summarize([], "day");
   const periods: Period[] = [];
-  let forgiven = new Set<number>();
-  let running = false;
+  // Forgiveness is per goal: a goal that already used its miss in this streak ends it on the next one.
+  let usedBy = new Set<number>();
+  // The days that were forgiven (several goals missing on one day is still one day).
+  let forgivenDays = new Set<ISODate>();
+  const forgivenByRun = new Map<ISODate, number>();
+  let runStart: ISODate | null = null;
+  const endRun = () => {
+    if (runStart) forgivenByRun.set(runStart, forgivenDays.size);
+    usedBy = new Set();
+    forgivenDays = new Set();
+    runStart = null;
+  };
   for (let d = sorted[0]; d <= today; d = addDays(d, 1)) {
     const active = activeDates.has(d);
-    // Goals that needed you today and have nothing logged.
-    const missing = goals.flatMap((g, i) => (owedOn(g, d) && !(g.sessions ? (g.sessions.get(d) ?? 0) > 0 : active) ? [i] : []));
-    if (!running) {
+    // Only goals with nothing logged can be missing, so check that before the costlier `owedOn`.
+    const missing: number[] = [];
+    if (active || runStart) {
+      goals.forEach((g, i) => {
+        const logged = g.sessions ? (g.sessions.get(d) ?? 0) > 0 : active;
+        if (!logged && owedOn(g, d)) missing.push(i);
+      });
+    }
+    if (!runStart) {
       // A streak starts on a day when everything that was needed got done.
       if (active && missing.length === 0) {
-        running = true;
+        runStart = d;
         periods.push(dayPeriod(d, false, 1, today));
       } else periods.push(dayPeriod(d, false, 0, today));
       continue;
     }
-    const broke = d < today && missing.some((i) => forgiven.has(i));
-    if (broke) {
+    if (d < today && missing.some((i) => usedBy.has(i))) {
       periods.push(dayPeriod(d, true, 0, today));
-      forgiven = new Set();
-      running = false;
+      endRun();
       continue;
     }
-    if (d < today) for (const i of missing) forgiven.add(i);
+    if (d < today && missing.length > 0) {
+      for (const i of missing) usedBy.add(i);
+      forgivenDays.add(d);
+    }
     periods.push(dayPeriod(d, false, active ? 1 : 0, today));
   }
+  endRun();
+  // `summarize` would forgive any one miss itself; here the per-goal rule above decides.
   const result = summarize(periods, "day", false);
-  return { ...result, currentForgiven: result.current > 0 ? forgiven.size : 0 };
+  const runs = result.runs.map((r) => ({ ...r, forgiven: forgivenByRun.get(r.start) ?? 0 }));
+  return { ...result, runs, currentForgiven: runs.find((r) => r.ongoing)?.forgiven ?? 0 };
 };
 
 export type DayMark = "done" | "due" | "missed" | "rest" | "paused" | "future";

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Schedule, ScheduleEpoch } from "../types";
 import { addDays, startOfWeek, todayIn, weekday } from "./dates";
-import { computeOverallStreak, computeStreak, weekMarks, weekProgress, withSchedule } from "./streaks";
+import { computeOverallStreak, computeStreak, owedOn, weekMarks, weekProgress, withSchedule } from "./streaks";
 
 const daily: Schedule = { kind: "days", days: [0, 1, 2, 3, 4, 5, 6] };
 const ep = (schedule: Schedule, from = "2026-01-01"): ScheduleEpoch[] => [{ from, schedule }];
@@ -218,6 +218,34 @@ describe("overall streak", () => {
       expect(both.currentForgiven).toBe(2);
     });
 
+    it("counts one forgiven day when several goals miss the same day", () => {
+      const r = life(days.filter((d) => d !== "2026-03-03"), days.filter((d) => d !== "2026-03-03"), "2026-03-06");
+      expect(r.currentForgiven).toBe(1);
+      expect(r.runs[0].forgiven).toBe(1);
+    });
+
+    it("starts a fresh streak on the first clean day after a break", () => {
+      const r = life(days, days.filter((d) => d !== "2026-03-02" && d !== "2026-03-03"), "2026-03-06");
+      expect(r.current).toBe(3);
+      expect(r.longest).toBe(3);
+      expect(r.runs[1].forgiven).toBe(1);
+      expect(r.runs[0].forgiven).toBe(0);
+    });
+
+    it("does not count a goal's miss today, which is still open", () => {
+      const r = life(days, days.filter((d) => d !== "2026-03-06"), "2026-03-06");
+      expect(r.current).toBe(6);
+      expect(r.currentForgiven).toBe(0);
+    });
+
+    it("mixes a weekly goal's late-week days with a daily goal", () => {
+      const weeklyGoal = { schedules: ep({ kind: "weekly", sessions: 3 }), pauses: [], since: "2026-03-01", sessions: on(), weekStartsOn: 1 as const };
+      const daily2 = ["2026-03-02", "2026-03-03", "2026-03-04", "2026-03-05", "2026-03-06", "2026-03-07", "2026-03-08"];
+      const dailyGoal = { schedules: ep(daily), pauses: [], since: "2026-03-01", sessions: on(...daily2), weekStartsOn: 1 as const };
+      // The weekly goal has slack until Friday, then needs every day; it misses Fri (forgiven) and Sat (ends it).
+      expect(computeOverallStreak(new Set(daily2), [dailyGoal, weeklyGoal], "2026-03-08").current).toBe(0);
+    });
+
     it("forgives the same goal only once", () => {
       const r = life(days, days.filter((d) => d !== "2026-03-02" && d !== "2026-03-05"), "2026-03-06");
       expect(r.current).toBe(1);
@@ -243,6 +271,20 @@ describe("overall streak", () => {
       const done = ["2026-03-02", "2026-03-03", "2026-03-04"];
       expect(life(done, "2026-03-08").current).toBe(3);
     });
+  });
+});
+
+describe("owedOn", () => {
+  const weekly = (...dates: string[]) => ({ schedules: ep({ kind: "weekly", sessions: 3 }), pauses: [], since: "2026-03-01", sessions: on(...dates), weekStartsOn: 1 as const });
+
+  it("gives a weekly goal slack until the days left match the sessions missing", () => {
+    expect(owedOn(weekly(), "2026-03-04")).toBe(false);
+    expect(owedOn(weekly(), "2026-03-06")).toBe(true);
+  });
+
+  it("counts two sessions on one day once", () => {
+    expect(owedOn(weekly("2026-03-02", "2026-03-02", "2026-03-03"), "2026-03-06")).toBe(false);
+    expect(owedOn(weekly("2026-03-02", "2026-03-02"), "2026-03-07")).toBe(true);
   });
 });
 
