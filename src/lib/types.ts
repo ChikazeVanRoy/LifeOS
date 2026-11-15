@@ -85,7 +85,7 @@ export interface LogEntry {
   projectId?: string;
   exercises?: ExerciseEntry[];
   /** Set when an entry was imported. Imported entries are read-only and keep themselves up to date. */
-  source?: "anki";
+  source?: "anki" | "library";
   createdAt: number;
   updatedAt: number;
 }
@@ -185,6 +185,15 @@ export interface AnkiLink {
   dayStartHour: number;
 }
 
+/** The link to Our Library. Holds a goal id and page positions, never book details beyond what logs show. */
+export interface LibraryLink {
+  /** The goal that receives reading from Library. */
+  goalId: string;
+  connectedAt: string;
+  /** The page last seen for each book being read, so only new pages are logged. */
+  seen: Record<string, number>;
+}
+
 export type ThemePref = "system" | "light" | "dark";
 export type WeightUnit = "kg" | "lb";
 
@@ -213,4 +222,5 @@ export interface AppData {
   applications: JobApplication[];
   timer: Timer | null;
   anki: AnkiLink | null;
+  library: LibraryLink | null;
 }

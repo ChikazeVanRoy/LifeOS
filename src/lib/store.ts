@@ -5,6 +5,7 @@ import { create } from "zustand";
 import { createEmptyData, localeDefaults, milestonesForGoal, roadmapFromTemplate, type RoadmapTemplate } from "./defaults";
 import { createDemoData } from "./demo";
 import { importAnki, type AnkiFeed, type ImportResult } from "./engine/anki";
+import { importLibrary, type LibraryFeed, type LibraryImportResult } from "./engine/library";
 import { addDays, deviceTimezone, resolveTz, todayIn } from "./engine/dates";
 import { withSchedule } from "./engine/streaks";
 import { connectFile, pushToFile, reconcile, rereadRevision } from "./file-sync";
@@ -84,6 +85,11 @@ interface State {
   syncAnkiFeed: (feed: AnkiFeed) => void;
   remapAnki: (feed: AnkiFeed, mapping: Record<string, string>) => void;
   disconnectAnki: (keepHistory: boolean) => void;
+
+  /** First import. Books being read are noted at their page, and finished books come in with their history. */
+  connectLibrary: (feed: LibraryFeed, goalId: string) => LibraryImportResult;
+  syncLibraryFeed: (feed: LibraryFeed) => void;
+  disconnectLibrary: (keepHistory: boolean) => void;
 
   startTimer: (goalId: string, typeId: string | null) => void;
   pauseTimer: () => void;
@@ -227,6 +233,7 @@ export const useStore = create<State>()((set, get) => {
         milestones: d.milestones.filter((m) => m.goalId !== id),
         pauses: d.pauses.filter((p) => p.goalId !== id),
         anki: d.anki && { ...d.anki, mapping: Object.fromEntries(Object.entries(d.anki.mapping).filter(([, goalId]) => goalId !== id)) },
+        library: d.library?.goalId === id ? null : d.library,
         timer: d.timer?.goalId === id ? null : d.timer,
       })),
 
@@ -324,7 +331,39 @@ export const useStore = create<State>()((set, get) => {
         ...d,
         anki: null,
         // Kept entries become ordinary ones, and count as logged by hand if Anki is connected again.
-        logs: keepHistory ? d.logs.map((l) => (l.source ? { ...l, source: undefined } : l)) : d.logs.filter((l) => !l.source),
+        logs: keepHistory ? d.logs.map((l) => (l.source === "anki" ? { ...l, source: undefined } : l)) : d.logs.filter((l) => l.source !== "anki"),
+      })),
+
+    connectLibrary: (feed, goalId) => {
+      const d = get().data;
+      const tz = tzNow(d.settings);
+      const result = importLibrary({ feed, goalId, seen: {}, goals: d.goals, logs: d.logs, today: todayIn(tz), tz, now: Date.now(), baseline: true });
+      update((x) => ({
+        ...x,
+        logs: result.logs,
+        goals: result.goals,
+        library: { goalId, connectedAt: new Date().toISOString(), seen: result.seen },
+      }));
+      return result;
+    },
+    syncLibraryFeed: (feed) => {
+      const d = get().data;
+      if (!d.library || get().mode !== "real") return;
+      const tz = tzNow(d.settings);
+      const today = todayIn(tz);
+      const result = importLibrary({ feed, goalId: d.library.goalId, seen: d.library.seen, goals: d.goals, logs: d.logs, today, tz, now: Date.now() });
+      const changed = result.added + result.updated + result.removed > 0;
+      const moved = JSON.stringify(result.seen) !== JSON.stringify(d.library.seen);
+      if (!changed && !moved) return;
+      const recent = result.changedDates.some((date) => date >= addDays(today, -6));
+      update((x) => ({ ...x, logs: result.logs, goals: result.goals, library: x.library && { ...x.library, seen: result.seen } }), recent);
+    },
+    disconnectLibrary: (keepHistory) =>
+      update((d) => ({
+        ...d,
+        library: null,
+        // Kept entries become ordinary ones, and count as logged by hand if Library is connected again.
+        logs: keepHistory ? d.logs.map((l) => (l.source === "library" ? { ...l, source: undefined } : l)) : d.logs.filter((l) => l.source !== "library"),
       })),
 
     startTimer: (goalId, typeId) => {

@@ -25,14 +25,14 @@ export const describeLog = (log: LogEntry, d: Derived) => {
 export function ActivityRow({ log, d, showDate }: { log: LogEntry; d: Derived; showDate?: boolean }) {
   const openLog = useUI((s) => s.openLog);
   const { goal, title, meta } = describeLog(log, d);
-  const imported = log.source === "anki";
+  const imported = !!log.source;
   const body = (
     <>
       {goal && <GoalBadge icon={goal.icon} color={goal.color} size={38} />}
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5 text-sm font-medium">
           <span className="truncate">{title}</span>
-          {imported && <span className="shrink-0 rounded-md bg-secondary px-1.5 text-[10.5px] leading-[18px] font-normal text-muted-foreground">Anki</span>}
+          {imported && <span className="shrink-0 rounded-md bg-secondary px-1.5 text-[10.5px] leading-[18px] font-normal text-muted-foreground">{log.source === "library" ? "Library" : "Anki"}</span>}
         </span>
         <span className="block truncate text-xs text-muted-foreground">{meta || "Session"}{log.note ? ` · ${log.note}` : ""}</span>
       </span>
@@ -43,7 +43,7 @@ export function ActivityRow({ log, d, showDate }: { log: LogEntry; d: Derived; s
       )}
     </>
   );
-  // Imported entries follow Anki, so they are managed from Settings.
+  // Imported entries follow their source, so they are managed from Settings.
   if (imported) return <div className="flex w-full items-center gap-3 rounded-2xl p-2">{body}</div>;
   return (
     <button onClick={() => openLog({ editing: log })} className="flex w-full items-center gap-3 rounded-2xl p-2 text-left transition-colors hover:bg-secondary/60">

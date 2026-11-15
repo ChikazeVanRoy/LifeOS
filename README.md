@@ -95,6 +95,27 @@ LifeOS can import daily review totals from [Anki Analytics](../anki-analytics) r
 - Dates follow Anki's own day, so a review just after midnight can count as the day before.
 - Set `ANKI_ANALYTICS_URL` if it runs somewhere other than `http://127.0.0.1:5174`.
 
+## Library
+
+LifeOS can read your reading from Our Library (`../Library`), the shared book tracker. Connect it from Settings, under Integrations, and choose the goal that reading counts towards.
+
+1. Create `.env.local` in this folder (it is git-ignored) with the account you sign in to Library with:
+
+   ```
+   LIBRARY_EMAIL=you@example.com
+   LIBRARY_PASSWORD=...
+   LIBRARY_PERSON=chikaze   # or gabe: whose reading to follow (default chikaze)
+   ```
+
+2. Restart LifeOS (`npm run service:restart`), then connect in Settings.
+
+- Library's address and public key are read from `../Library/app/.env.local`. Set `LIBRARY_APP_DIR`, or `LIBRARY_SUPABASE_URL` and `LIBRARY_SUPABASE_ANON_KEY`, if it lives elsewhere.
+- The password stays on the server in `src/app/api/library/route.ts`, which only answers this computer. Only titles, page counts, finish dates and your current page leave it, never ratings, reviews or prices.
+- A **finished book** becomes one entry on its finish date, with its pages. A book with no page count is logged as a session without a duration. Finish dates with only a month or year can't be placed and are skipped.
+- **Pages read in a book you're reading** are logged on the day LifeOS sees your page move (it checks every few minutes and when the window opens), and aren't counted again when the book is finished. Books in progress at connection time are followed from their current page.
+- Reading you log by hand wins for that day, so nothing counts twice. Imports are safe to repeat.
+- It needs the LifeOS server and an internet connection, and it never syncs in demo mode.
+
 ## Not connected yet
 
 Hevy, Apple Health and Calendar are planned extensions. None of them are integrated.

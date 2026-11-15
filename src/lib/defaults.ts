@@ -226,5 +226,6 @@ export const createEmptyData = (today: ISODate, overrides: Partial<Settings> = {
     applications: [],
     timer: null,
     anki: null,
+    library: null,
   };
 };

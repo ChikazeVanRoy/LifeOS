@@ -128,6 +128,7 @@ function LogBody({ preset, onDone }: { preset: LogPreset | null; onDone: () => v
   const d = useDerived();
   const { form, setForm, pickMinutes } = useForm(preset);
   const ankiMapping = useStore((s) => s.data.anki?.mapping);
+  const libraryGoalId = useStore((s) => s.data.library?.goalId);
   const { addLog, updateLog, deleteLog, restoreLog, addMeasurement, updateProject, startTimer } = useStore.getState();
   const [more, setMore] = useState(false);
   const [lifts, setLifts] = useState(false);
@@ -300,6 +301,7 @@ function LogBody({ preset, onDone }: { preset: LogPreset | null; onDone: () => v
                 </button>
               )}
             </div>
+            {!editing && !form.weighIn && !!goal && goal.id === libraryGoalId && <p className="mt-2 px-1 text-xs text-muted-foreground">Library syncs this goal&apos;s reading automatically. Logging here replaces that day&apos;s import.</p>}
             {!editing && !form.weighIn && ankiSynced && <p className="mt-2 px-1 text-xs text-muted-foreground">Anki syncs this automatically. A session logged here replaces that day&apos;s import.</p>}
           </Section>
         )}
