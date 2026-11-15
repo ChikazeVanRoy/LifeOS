@@ -53,7 +53,7 @@ const log = z.object({
   note: z.string().optional(),
   projectId: z.string().optional(),
   exercises: z.array(z.object({ exercise: z.string(), sets: nonNeg, reps: nonNeg, kg: nonNeg })).optional(),
-  source: z.enum(["anki", "library"]).optional(),
+  source: z.enum(["anki", "library", "hevy"]).optional(),
   createdAt: z.number(),
   updatedAt: z.number(),
 });
@@ -139,6 +139,11 @@ const appData = z.object({
       connectedAt: z.string(),
       seen: z.record(z.string(), z.number().int().min(0)),
     })
+    .nullable()
+    .optional()
+    .transform((link) => link ?? null),
+  hevy: z
+    .object({ goalId: z.string(), connectedAt: z.string() })
     .nullable()
     .optional()
     .transform((link) => link ?? null),

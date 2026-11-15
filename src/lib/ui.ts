@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import type { AnkiCheck } from "./engine/anki";
+import type { HevyCheck } from "./engine/hevy";
 import type { LibraryCheck } from "./engine/library";
 import type { LogEntry } from "./types";
 
@@ -34,6 +35,9 @@ interface UI {
   /** The latest answer from Our Library. Not saved. */
   libraryCheck: LibraryCheck | null;
   setLibraryCheck: (check: LibraryCheck) => void;
+  /** The latest answer from Hevy. Not saved. */
+  hevyCheck: HevyCheck | null;
+  setHevyCheck: (check: HevyCheck) => void;
   fileStatus: FileStatus;
   setFileStatus: (patch: Partial<FileStatus>) => void;
 }
@@ -47,6 +51,8 @@ export const useUI = create<UI>()((set) => ({
   setAnkiCheck: (ankiCheck) => set({ ankiCheck }),
   libraryCheck: null,
   setLibraryCheck: (libraryCheck) => set({ libraryCheck }),
+  hevyCheck: null,
+  setHevyCheck: (hevyCheck) => set({ hevyCheck }),
   fileStatus: { state: "checking" },
   setFileStatus: (patch) => set((s) => ({ fileStatus: { ...s.fileStatus, ...patch } })),
 }));
