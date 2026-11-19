@@ -10,7 +10,7 @@ import {
   signOut as fbSignOut,
   type User,
 } from "firebase/auth";
-import { collection, deleteDoc, doc, documentId, getDocs, getFirestore, limit, orderBy, query, runTransaction, setDoc } from "firebase/firestore";
+import { collection, deleteDoc, doc, documentId, getDoc, getDocs, getFirestore, limit, orderBy, query, runTransaction, setDoc } from "firebase/firestore";
 import { parseImport } from "./io";
 
 /**
@@ -173,10 +173,18 @@ export const readHealth = async (days = 14): Promise<HealthDay[]> => {
   });
 };
 
-/** What the Shortcut needs to sign in as this person without their password. Keep it private. */
-export const shortcutSetup = () => ({
-  uid,
-  projectId: config.projectId ?? "",
-  apiKey: config.apiKey ?? "",
-  refreshToken: auth().currentUser?.refreshToken ?? "",
-});
+/**
+ * What the Shortcut needs to add health numbers. The key lives in the person's own space, is made
+ * the first time it is asked for, and is what the rules check. Generating a new one cuts off the old.
+ */
+export const shortcutSetup = async (regenerate = false) => {
+  if (!uid) throw new Error("Not signed in");
+  const ref = doc(db(), "users", uid, "config", "health");
+  const existing = regenerate ? null : (await getDoc(ref)).data()?.key;
+  let key = typeof existing === "string" ? existing : "";
+  if (!key) {
+    key = Array.from(crypto.getRandomValues(new Uint8Array(24)), (b) => b.toString(16).padStart(2, "0")).join("");
+    await setDoc(ref, { key });
+  }
+  return { uid, projectId: config.projectId ?? "", apiKey: config.apiKey ?? "", key };
+};

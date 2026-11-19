@@ -15,9 +15,6 @@ const copy = async (text: string, what: string) => {
   }
 };
 
-/** What the Shortcut posts. Every value is sent as text because that is what Shortcuts can do. */
-const BODY = `{"fields":{"steps":{"stringValue":"STEPS"},"weight":{"stringValue":"WEIGHT"},"workoutMinutes":{"stringValue":"WORKOUT_MINUTES"},"sleepHours":{"stringValue":"SLEEP_HOURS"}}}`;
-
 const Value = ({ label, value, secret }: { label: string; value: string; secret?: boolean }) => {
   const [shown, setShown] = useState(!secret);
   return (
@@ -41,14 +38,28 @@ const cell = (n: number | undefined, digits = 0) => (n === undefined ? "–" : n
 /** Apple Health can't be read by a website, so an iPhone Shortcut sends the day's numbers here. */
 export function HealthPanel() {
   const [days, setDays] = useState<HealthDay[] | null>(null);
-  const [setup, setSetup] = useState(false);
+  const [setup, setSetup] = useState<Awaited<ReturnType<typeof shortcutSetup>> | null>(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     readHealth(7).then(setDays, () => setDays([]));
   }, []);
 
-  const s = setup ? shortcutSetup() : null;
-  const url = s ? `https://firestore.googleapis.com/v1/projects/${s.projectId}/databases/(default)/documents/users/${s.uid}/health/` : "";
+  const open = async (regenerate = false) => {
+    setBusy(true);
+    try {
+      setSetup(await shortcutSetup(regenerate));
+    } catch {
+      toast.error("Couldn't load the setup. Check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const s = setup;
+  const start = s ? `https://firestore.googleapis.com/v1/projects/${s.projectId}/databases/(default)/documents/users/${s.uid}/health/` : "";
+  /** Every value is sent as text, because that is what Shortcuts can do. */
+  const body = s ? `{"fields":{"key":{"stringValue":"${s.key}"},"steps":{"stringValue":"STEPS"},"workoutMinutes":{"stringValue":"MINUTES"}}}` : "";
 
   return (
     <div className="space-y-3 py-3">
@@ -76,29 +87,29 @@ export function HealthPanel() {
         </table>
       )}
 
-      <Button variant="secondary" size="sm" onClick={() => setSetup(!setup)}>{setup ? "Hide setup" : "Set up the Shortcut"}</Button>
+      <Button variant="secondary" size="sm" disabled={busy} onClick={() => (s ? setSetup(null) : open())}>{s ? "Hide setup" : "Set up the Shortcut"}</Button>
 
       {s && (
         <div className="space-y-3 rounded-xl border p-3 text-xs">
           <p className="text-muted-foreground">
-            The Shortcut signs in with the key below instead of your password. Anyone with it can use your account, so do not share it.
-            Changing your password stops it working.
+            The Shortcut proves it is you with the secret key inside the message below. It can only add these health numbers. It cannot read
+            anything. If the key leaks, make a new one and paste it in again.
           </p>
           <div className="divide-y">
-            <Value label="API key" value={s.apiKey} />
-            <Value label="Sign-in key" value={s.refreshToken} secret />
-            <Value label="Address to send to (add the date, yyyy-MM-dd, at the end)" value={url} />
-            <Value label="Message body" value={BODY} />
+            <Value label="Address, first part" value={start} />
+            <Value label="Address, last part" value={`?key=${s.apiKey}`} />
+            <Value label="Message" value={body} />
           </div>
           <ol className="list-decimal space-y-1.5 pl-4 text-muted-foreground">
-            <li>Open Shortcuts and make a new shortcut. Add <b>Format Date</b> on the current date with the custom format <code>yyyy-MM-dd</code>. This is the day.</li>
-            <li>Add <b>Find Health Samples</b> for Step Count starting today, then <b>Calculate Statistics</b> (Sum). Do the same for Workouts (sum of Duration in minutes). Weight and Sleep are optional.</li>
-            <li>Add <b>Get Contents of URL</b>: address <code>https://securetoken.googleapis.com/v1/token?key=</code> plus the API key, method POST, request body Form with <code>grant_type</code> = <code>refresh_token</code> and <code>refresh_token</code> = the sign-in key.</li>
-            <li>Add <b>Get Dictionary Value</b> for <code>id_token</code>.</li>
-            <li>Add a <b>Text</b> with the message body, replacing STEPS and the others with the matching results. Leave out lines you do not have.</li>
-            <li>Add <b>Get Contents of URL</b>: the address to send to plus the day, method PATCH, header <code>Authorization</code> = <code>Bearer </code> plus the id_token, header <code>Content-Type</code> = <code>application/json</code>, request body File = the Text.</li>
-            <li>In Automation, make a Personal Automation to run it daily at, say, 9 PM, and turn off Ask Before Running.</li>
+            <li>In Shortcuts, make a new shortcut. Add <b>Format Date</b> on the current date, Date Format Custom, <code>yyyy-MM-dd</code>.</li>
+            <li>Add <b>Number</b> <code>0</code> then <b>Set Variable</b> <code>Steps</code>. Add <b>Number</b> <code>0</code> then <b>Set Variable</b> <code>Minutes</code>.</li>
+            <li>Add <b>Find Health Samples</b>: Type Step Count, Start Date is Today. Add <b>If</b> it has any value, then <b>Calculate Statistics</b> (Sum), then <b>Set Variable</b> <code>Steps</code>, then <b>End If</b>.</li>
+            <li>Add <b>Find Health Samples</b>: Type Workout, Start Date is Today. Add <b>If</b> it has any value, then <b>Get Details</b> (Duration), <b>Calculate Statistics</b> (Sum), <b>Set Variable</b> <code>Minutes</code>, <b>End If</b>.</li>
+            <li>Add <b>Text</b>: paste the message. Replace <code>STEPS</code> and <code>MINUTES</code> by tapping the <code>Steps</code> and <code>Minutes</code> variables.</li>
+            <li>Add <b>Get Contents of URL</b>. For the address, paste the first part, then the <b>Formatted Date</b> variable, then paste the last part. Method <b>PATCH</b>, header <code>Content-Type</code> = <code>application/json</code>, request body <b>File</b> = the Text.</li>
+            <li>Run it once and check this page. Then add a Personal Automation, Time of Day, 9 PM, Run Immediately.</li>
           </ol>
+          <Button variant="ghost" size="sm" disabled={busy} onClick={() => open(true)}>Make a new key</Button>
         </div>
       )}
     </div>
