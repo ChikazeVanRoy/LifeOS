@@ -328,7 +328,7 @@ export function SettingsPage() {
           <AnkiPanel />
           <LibraryPanel />
           {cloudEnabled && <HealthPanel />}
-          {["Apple Health", "Calendar"].map((n) => (
+          {(cloudEnabled ? ["Calendar"] : ["Apple Health", "Calendar"]).map((n) => (
             <Row key={n} label={n}><span className="text-xs text-muted-foreground">Not connected</span></Row>
           ))}
         </Group>
