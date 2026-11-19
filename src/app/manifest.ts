@@ -1,5 +1,8 @@
 import type { MetadataRoute } from "next";
 
+// Needed for the static site that is hosted on Firebase.
+export const dynamic = "force-static";
+
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "LifeOS",

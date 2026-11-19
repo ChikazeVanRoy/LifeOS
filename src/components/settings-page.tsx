@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowDown, ArrowUp, Download, RefreshCw, FlaskConical, FolderOpen, Pencil, Plus, Trash2, Upload } from "lucide-react";
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { AnkiPanel } from "@/components/anki-panel";
 import { HevyPanel } from "@/components/hevy-panel";
@@ -16,8 +16,11 @@ import { GoalBadge, PageHeader } from "@/components/viz/primitives";
 import { createGoal, nextColor } from "@/lib/defaults";
 import { deviceTimezone, fmtFull } from "@/lib/engine/dates";
 import { describeSchedule } from "@/lib/engine/streaks";
+import { cloudEnabled, signOut } from "@/lib/cloud";
 import { checkUpdate, installUpdate, revealFile } from "@/lib/file-sync";
+import { signedInEmail } from "@/components/shell/auth-gate";
 import { parseImport, toExport } from "@/lib/io";
+import { changeHour, disablePush, enablePush, pushState, reminderHour, showTest, type PushState } from "@/lib/push";
 import { useStore } from "@/lib/store";
 import { useUI } from "@/lib/ui";
 import type { AppData, Goal, ThemePref, WeightUnit } from "@/lib/types";
@@ -67,9 +70,71 @@ function DataFileRow() {
           : status.savedAt
             ? `Saved ${new Date(status.savedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}${status.backups ? ` · ${plural(status.backups, "backup")}` : ""}`
             : "Nothing saved yet. It starts with your first change.";
+  if (cloudEnabled) {
+    return (
+      <Row label="Account" hint={`${signedInEmail() ?? ""} · ${state}`}>
+        <Button variant="secondary" size="sm" onClick={() => signOut().then(() => location.reload())}>Sign out</Button>
+      </Row>
+    );
+  }
   return (
     <Row label="Data file" hint={state}>
       <Button variant="secondary" size="sm" onClick={revealFile}><FolderOpen /> Show in Finder</Button>
+    </Row>
+  );
+}
+
+const hourLabel = (h: number) => new Date(2000, 0, 1, h).toLocaleTimeString(undefined, { hour: "numeric" });
+
+/** An evening nudge when something planned for today is still undone. Each device chooses for itself. */
+function RemindersRow() {
+  const [state, setState] = useState<PushState | "checking">("checking");
+  const [hour, setHour] = useState(reminderHour);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    void pushState().then(setState);
+  }, []);
+
+  const run = async (fn: () => Promise<PushState | void>) => {
+    setBusy(true);
+    try {
+      const next = await fn();
+      if (next) setState(next);
+    } catch {
+      toast.error("Couldn't change reminders. Check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const hint =
+    state === "unsupported"
+      ? "This browser can't show reminders. On an iPhone, add LifeOS to your Home Screen first, then open it from there."
+      : state === "blocked"
+        ? "Notifications are blocked for LifeOS. Allow them in your device's settings, then come back."
+        : state === "on"
+          ? `Once a day from ${hourLabel(hour)}, only if something planned is still open.`
+          : "Get a nudge in the evening when something planned for today is still open.";
+
+  return (
+    <Row label="Reminders" hint={hint}>
+      {state === "on" ? (
+        <div className="flex items-center gap-2">
+          <select
+            aria-label="Reminder time"
+            value={hour}
+            disabled={busy}
+            onChange={(e) => { const h = Number(e.target.value); setHour(h); void run(() => changeHour(h)); }}
+            className="h-8 rounded-[10px] border bg-card px-2 text-[13px]"
+          >
+            {Array.from({ length: 17 }, (_, i) => i + 6).map((h) => <option key={h} value={h}>{hourLabel(h)}</option>)}
+          </select>
+          <Button variant="secondary" size="sm" disabled={busy} onClick={() => run(async () => { await showTest(); })}>Test</Button>
+          <Button variant="secondary" size="sm" disabled={busy} onClick={() => run(async () => { await disablePush(); return "off"; })}>Turn off</Button>
+        </div>
+      ) : state === "off" ? (
+        <Button size="sm" disabled={busy} onClick={() => run(() => enablePush(hour))}>Turn on</Button>
+      ) : null}
     </Row>
   );
 }
@@ -228,8 +293,14 @@ export function SettingsPage() {
           <Rests />
         </Group>
 
+        {cloudEnabled && (
+          <Group title="Reminders" description="Sent to this device, even when LifeOS is closed.">
+            <RemindersRow />
+          </Group>
+        )}
+
         <Group title="App" description="Updates come from GitHub. After updating, close LifeOS and open it again.">
-          <UpdateRow />
+          {!process.env.NEXT_PUBLIC_STATIC && <UpdateRow />}
         </Group>
 
         <Group title="Your data" description="Saved automatically to a file on this Mac. The browser only keeps a working copy.">

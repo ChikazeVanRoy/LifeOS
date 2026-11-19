@@ -2,8 +2,8 @@
 
 import { ArrowLeft, BedDouble, Pencil, Plus, Timer } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import { ActivityRow } from "@/components/activity-row";
 import { WeekDots, weekLabel } from "@/components/goal-card";
@@ -72,8 +72,19 @@ function OutputChart({ view, metric }: { view: GoalView; metric: string }) {
   );
 }
 
+/**
+ * The goal id comes from the address bar. The hosted copy is a static site that serves one page for
+ * every goal, so the id Next.js was built with is a placeholder and can't be trusted here.
+ */
+const subscribe = (notify: () => void) => {
+  window.addEventListener("popstate", notify);
+  return () => window.removeEventListener("popstate", notify);
+};
+const goalIdFromPath = () => decodeURIComponent(location.pathname.split("/").filter(Boolean)[1] ?? "");
+
 export function GoalDetail() {
-  const { id } = useParams<{ id: string }>();
+  usePathname(); // re-render when navigating between goals
+  const id = useSyncExternalStore(subscribe, goalIdFromPath, () => "");
   const d = useDerived();
   const openLog = useUI((s) => s.openLog);
   const { addPause, startTimer } = useStore.getState();

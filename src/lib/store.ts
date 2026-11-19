@@ -9,7 +9,8 @@ import { importHevy, type HevyFeed, type HevyImportResult } from "./engine/hevy"
 import { importLibrary, type LibraryFeed, type LibraryImportResult } from "./engine/library";
 import { addDays, deviceTimezone, resolveTz, todayIn } from "./engine/dates";
 import { withSchedule } from "./engine/streaks";
-import { connectFile, pushToFile, reconcile, rereadRevision } from "./file-sync";
+import { cloudEnabled } from "./cloud";
+import { connectFile, pushToFile, realKey, reconcile, rereadRevision } from "./file-sync";
 import { createLog, type NewLog } from "./log";
 import { migrate } from "./migrate";
 import { storage } from "./storage";
@@ -30,7 +31,7 @@ import type {
 import { uid } from "./utils";
 
 type Mode = "real" | "demo";
-const KEY: Record<Mode, string> = { real: "lifeos:data:real", demo: "lifeos:data:demo" };
+const keyFor = (mode: Mode) => (mode === "real" ? realKey() : "lifeos:data:demo");
 const MODE_KEY = "lifeos:mode";
 
 interface State {
@@ -115,7 +116,7 @@ let writes: Promise<unknown> = Promise.resolve();
 /** The browser copy first, so the app stays instant, then the file. Demo data never reaches the file. */
 const save = (mode: Mode, data: AppData) => {
   writes = writes.then(async () => {
-    const ok = await storage.write(KEY[mode], data);
+    const ok = await storage.write(keyFor(mode), data);
     if (ok) announce();
     else if (mode === "demo") toast.error("Could not save the demo.");
   });
@@ -124,9 +125,37 @@ const save = (mode: Mode, data: AppData) => {
 
 const hasData = (d: AppData | undefined) => !!(d?.settings.onboarded || d?.logs.length);
 
+const LEGACY_KEY = "lifeos:data:real";
+
+/** The data file on the Mac, when this page is served from it. Elsewhere there is none. */
+const macFileData = async (): Promise<unknown> => {
+  try {
+    const res = await fetch("/api/data", { cache: "no-store" });
+    const body = res.ok ? ((await res.json()) as { exists?: boolean; data?: unknown }) : null;
+    return body?.exists ? body.data : undefined;
+  } catch {
+    return undefined;
+  }
+};
+const DECLINED = "lifeos:legacy:declined";
+
+/**
+ * Data from before accounts existed. It is only uploaded if the person says it is theirs.
+ * On the Mac, the data file is the complete copy: a browser's copy can be behind it.
+ */
+const offerDeviceData = async () => {
+  if (await storage.read(DECLINED)) return undefined;
+  const legacy = migrate((await macFileData()) ?? (await storage.read(LEGACY_KEY))) as AppData | undefined;
+  if (!hasData(legacy)) return undefined;
+  if (window.confirm("LifeOS found data saved on this device from before accounts. Upload it to your account?\n\nOK to upload, Cancel to start fresh.")) return legacy;
+  await storage.write(DECLINED, true);
+  return undefined;
+};
+
 /** The real account: the file when it can be reached, otherwise this browser's copy. */
 const loadReal = async () => {
-  const local = migrate(await storage.read(KEY.real)) as AppData | undefined;
+  let local = migrate(await storage.read(keyFor("real"))) as AppData | undefined;
+  if (cloudEnabled && !hasData(local)) local = await offerDeviceData();
   const { data, notice } = await reconcile(local, hasData(local));
   if (notice) toast(notice);
   return data;
@@ -158,7 +187,7 @@ export const useStore = create<State>()((set, get) => {
     hydrate: async () => {
       const mode = (await storage.read<Mode>(MODE_KEY)) === "demo" ? "demo" : "real";
       const today = todayIn(deviceTimezone());
-      const saved = mode === "real" ? await loadReal() : (migrate(await storage.read(KEY.demo)) as AppData | undefined);
+      const saved = mode === "real" ? await loadReal() : (migrate(await storage.read(keyFor("demo"))) as AppData | undefined);
       // Setup that was never finished holds nothing worth keeping, so it starts over.
       const stored = hasData(saved) ? saved : undefined;
       const data = stored ?? (mode === "demo" ? createDemoData(today) : freshData(today));
@@ -177,7 +206,7 @@ export const useStore = create<State>()((set, get) => {
 
     exitDemo: () => {
       void storage.write(MODE_KEY, "real");
-      void storage.remove(KEY.demo);
+      void storage.remove(keyFor("demo"));
       loadReal().then((stored) => {
         set({ mode: "real", data: hasData(stored) ? stored! : freshData(todayIn(deviceTimezone())), celebrate: false });
       });
@@ -427,7 +456,7 @@ export const timerElapsedMs = (t: Timer, now = Date.now()) => t.bankedMs + (t.pa
 channel?.addEventListener("message", () => {
   const { mode } = useStore.getState();
   void rereadRevision();
-  storage.read(KEY[mode]).then((data) => {
+  storage.read(keyFor(mode)).then((data) => {
     if (data) useStore.setState({ data: migrate(data) as AppData, celebrate: false });
   });
 });
@@ -439,7 +468,7 @@ connectFile({
   },
   apply: (data) => {
     useStore.setState({ data, celebrate: false });
-    void storage.write(KEY.real, data);
+    void storage.write(keyFor("real"), data);
   },
   announce,
 });

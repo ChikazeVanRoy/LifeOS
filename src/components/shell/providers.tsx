@@ -7,6 +7,7 @@ import { todayIn } from "@/lib/engine/dates";
 import { derive, type Derived } from "@/lib/engine/derive";
 import { resolveTz } from "@/lib/engine/dates";
 import { useStore } from "@/lib/store";
+import { AuthGate } from "./auth-gate";
 import { Shell } from "./shell";
 
 const DerivedContext = createContext<Derived | null>(null);
@@ -68,18 +69,15 @@ function DerivedProvider({ children }: { children: ReactNode }) {
 }
 
 export function Providers({ children }: { children: ReactNode }) {
-  const hydrate = useStore((s) => s.hydrate);
   const dark = useResolvedTheme();
-
-  useEffect(() => {
-    void hydrate();
-  }, [hydrate]);
 
   return (
     <MotionConfig reducedMotion="user">
-      <DerivedProvider>
-        <Shell>{children}</Shell>
-      </DerivedProvider>
+      <AuthGate>
+        <DerivedProvider>
+          <Shell>{children}</Shell>
+        </DerivedProvider>
+      </AuthGate>
       <Toaster theme={dark ? "dark" : "light"} />
     </MotionConfig>
   );

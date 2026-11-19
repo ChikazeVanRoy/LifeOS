@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect } from "react";
+import { cloudEnabled, cloudRead, cloudUid, cloudWrite } from "./cloud";
 import { migrate } from "./migrate";
 import { planLoad } from "./reconcile";
 import { storage } from "./storage";
 import type { AppData } from "./types";
 import { useUI } from "./ui";
 
-const REVISION = "lifeos:file:revision";
-const PENDING = "lifeos:file:pending";
+/** Each signed-in person keeps their own revision and unsaved flag, so two accounts on one browser never mix. */
+const scoped = (key: string) => (cloudUid() ? `${key}:${cloudUid()}` : key);
+const revisionKey = () => scoped("lifeos:file:revision");
+const pendingKey = () => scoped("lifeos:file:pending");
 const headers = { "Content-Type": "application/json", "x-requested-by": "lifeos" };
 
 /** The file revision this browser's data is based on. Null until it has seen one. */
@@ -22,6 +25,8 @@ interface Bridge {
   announce: () => void;
 }
 let bridge: Bridge | null = null;
+/** Where the real account is kept in this browser. */
+export const realKey = () => scoped("lifeos:data:real");
 export const connectFile = (b: Bridge) => {
   bridge = b;
 };
@@ -30,16 +35,16 @@ const status = (patch: Parameters<ReturnType<typeof useUI.getState>["setFileStat
 
 const setRevision = (value: number) => {
   revision = value;
-  void storage.write(REVISION, value);
+  void storage.write(revisionKey(), value);
 };
 const setPending = (value: boolean) => {
   pending = value;
-  void storage.write(PENDING, value);
+  void storage.write(pendingKey(), value);
 };
 
 /** Another tab saved, so it knows the latest revision. */
 export const rereadRevision = async () => {
-  const saved = await storage.read<number>(REVISION);
+  const saved = await storage.read<number>(revisionKey());
   if (saved !== undefined) revision = saved;
 };
 
@@ -55,6 +60,10 @@ interface Remote {
 
 const fetchRemote = async (check = false): Promise<Remote | null> => {
   try {
+    if (cloudEnabled) {
+      const remote = await cloudRead();
+      return { ...remote, path: "Cloud", ...(check ? { data: undefined } : {}) };
+    }
     const res = await fetch(`/api/data${check ? "?check=1" : ""}`, { cache: "no-store" });
     return res.ok ? ((await res.json()) as Remote) : null;
   } catch {
@@ -62,8 +71,21 @@ const fetchRemote = async (check = false): Promise<Remote | null> => {
   }
 };
 
-const put = (baseRevision: number | null, data: AppData) =>
-  fetch("/api/data", { method: "PUT", headers, body: JSON.stringify({ baseRevision, data }) });
+type Sent = { kind: "saved"; revision: number; savedAt: string; backups?: number } | { kind: "conflict" } | { kind: "error"; error?: string };
+
+/** Sends a save to the cloud when signed in, otherwise to the file on this Mac. */
+const put = async (baseRevision: number | null, data: AppData): Promise<Sent> => {
+  if (cloudEnabled) {
+    const result = await cloudWrite(baseRevision, data as unknown as Record<string, unknown>);
+    if (result.status === "saved") return { kind: "saved", revision: result.revision, savedAt: result.savedAt };
+    return result.status === "conflict" ? { kind: "conflict" } : { kind: "error", error: result.error };
+  }
+  const res = await fetch("/api/data", { method: "PUT", headers, body: JSON.stringify({ baseRevision, data }) });
+  const body = (await res.json()) as { revision?: number; savedAt?: string; backups?: number; error?: string };
+  if (res.status === 409) return { kind: "conflict" };
+  if (!res.ok) return { kind: "error", error: body.error };
+  return { kind: "saved", revision: body.revision as number, savedAt: body.savedAt as string, backups: body.backups };
+};
 
 const adoptFile = (remote: Remote) => {
   const data = migrate(remote.data) as AppData;
@@ -75,7 +97,7 @@ const adoptFile = (remote: Remote) => {
 
 /** Decides which copy to trust when the app loads. The rules are in `reconcile.ts`. */
 export const reconcile = async (local: AppData | undefined, localHasData: boolean): Promise<{ data: AppData | undefined; notice?: string }> => {
-  const [remote, savedRevision, savedPending] = await Promise.all([fetchRemote(), storage.read<number>(REVISION), storage.read<boolean>(PENDING)]);
+  const [remote, savedRevision, savedPending] = await Promise.all([fetchRemote(), storage.read<number>(revisionKey()), storage.read<boolean>(pendingKey())]);
   const fileData = remote?.exists ? (migrate(remote.data) as AppData) : undefined;
 
   const plan = planLoad({
@@ -109,11 +131,11 @@ export const reconcile = async (local: AppData | undefined, localHasData: boolea
   if (plan === "use-file-keep-copy") {
     // A revision nothing can match makes the server keep this copy as a conflict backup.
     await put(-1, local as AppData).catch(() => undefined);
-    await storage.write("lifeos:data:real", fileData);
+    await storage.write(realKey(), fileData);
     return { data: adoptFile(remote as Remote), notice: "Loaded your saved file. This browser's different data was kept in your backups." };
   }
 
-  await storage.write("lifeos:data:real", fileData);
+  await storage.write(realKey(), fileData);
   return { data: adoptFile(remote as Remote), notice: remote?.recovered ? "Your data file was damaged, so LifeOS restored the latest backup." : undefined };
 };
 
@@ -134,21 +156,20 @@ const drain = async () => {
     while (waiting) {
       const data = waiting;
       waiting = null;
-      const res = await put(revision, data);
-      const body = (await res.json()) as { revision?: number; savedAt?: string; backups?: number; error?: string };
+      const sent = await put(revision, data);
 
-      if (res.status === 409) {
+      if (sent.kind === "conflict") {
         // Another browser saved first. Its data stands, and this one is in the backups.
         await refresh();
         return;
       }
-      if (!res.ok) {
-        console.error("LifeOS could not save to the file:", body.error);
+      if (sent.kind === "error") {
+        console.error("LifeOS could not save:", sent.error);
         status({ state: "browser" });
         return;
       }
-      setRevision(body.revision as number);
-      status({ state: "saved", savedAt: body.savedAt, backups: body.backups });
+      setRevision(sent.revision);
+      status({ state: "saved", savedAt: sent.savedAt, backups: sent.backups });
       bridge?.announce();
     }
     setPending(false);

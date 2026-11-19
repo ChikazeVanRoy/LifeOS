@@ -1,0 +1,21 @@
+rules_version = '2';
+
+service cloud.firestore {
+  // Two people share this app. Each can read the other's data, but only write their own.
+  // Who they are lives in the database, in config/household (a list of emails), not in this
+  // public repository. Only the Firebase console or an admin can change that document.
+  function household() {
+    return request.auth != null
+      && request.auth.token.email.lower() in get(/databases/$(database)/documents/config/household).data.emails;
+  }
+
+  match /databases/{database}/documents {
+    match /users/{owner}/{document=**} {
+      allow read: if household();
+      allow write: if household() && request.auth.uid == owner;
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
