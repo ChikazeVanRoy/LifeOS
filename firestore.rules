@@ -6,7 +6,7 @@ service cloud.firestore {
   // public repository. Only the Firebase console or an admin can change that document.
   function household() {
     return request.auth != null
-      && request.auth.token.email.lower() in get(/databases/$(database)/documents/config/household).data.emails;
+      && request.auth.token.email.lower() in get(/databases/(default)/documents/config/household).data.emails;
   }
 
   match /databases/{database}/documents {
