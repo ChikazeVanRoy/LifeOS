@@ -75,7 +75,7 @@ export function HealthPanel() {
       ) : (
         <table className="w-full text-xs tabular-nums">
           <thead className="text-muted-foreground">
-            <tr className="text-left"><th className="py-1 font-normal">Day</th><th className="font-normal">Steps</th><th className="font-normal">Weight</th><th className="font-normal">Workout min</th><th className="font-normal">Sleep h</th></tr>
+            <tr className="text-left"><th className="py-1 font-normal">Day</th><th className="font-normal">Steps</th><th className="font-normal">Weight</th><th className="font-normal">Exercise min</th><th className="font-normal">Sleep h</th></tr>
           </thead>
           <tbody>
             {days.map((d) => (
@@ -103,11 +103,11 @@ export function HealthPanel() {
           <ol className="list-decimal space-y-1.5 pl-4 text-muted-foreground">
             <li>In Shortcuts, make a new shortcut. Add <b>Format Date</b> on the current date, Date Format Custom, <code>yyyy-MM-dd</code>.</li>
             <li>Add <b>Number</b> <code>0</code> then <b>Set Variable</b> <code>Steps</code>. Add <b>Number</b> <code>0</code> then <b>Set Variable</b> <code>Minutes</code>.</li>
-            <li>Add <b>Find Health Samples</b>: Type Step Count, Start Date is Today. Add <b>If</b> it has any value, then <b>Calculate Statistics</b> (Sum), then <b>Set Variable</b> <code>Steps</code>, then <b>End If</b>.</li>
-            <li>Add <b>Find Health Samples</b>: Type Workout, Start Date is Today. Add <b>If</b> it has any value, then <b>Get Details</b> (Duration), <b>Calculate Statistics</b> (Sum), <b>Set Variable</b> <code>Minutes</code>, <b>End If</b>.</li>
+            <li>Add <b>Find Health Samples</b>: Type Step Count, Start Date is in the last 1 days. Add <b>If</b> it has any value, then <b>Calculate Statistics</b> (Sum), then <b>Set Variable</b> <code>Steps</code>, then <b>End If</b>.</li>
+            <li>Add <b>Find Health Samples</b>: Type Exercise Minutes, Start Date is in the last 1 days. Add <b>If</b> it has any value, then <b>Get Details</b> (Duration), <b>Calculate Statistics</b> (Sum), <b>Set Variable</b> <code>Minutes</code>, <b>End If</b>.</li>
             <li>Add <b>Text</b>: paste the message. Replace <code>STEPS</code> and <code>MINUTES</code> by tapping the <code>Steps</code> and <code>Minutes</code> variables.</li>
             <li>Add <b>Get Contents of URL</b>. For the address, paste the first part, then the <b>Formatted Date</b> variable, then paste the last part. Method <b>PATCH</b>, header <code>Content-Type</code> = <code>application/json</code>, request body <b>File</b> = the Text.</li>
-            <li>Run it once and check this page. Then add a Personal Automation, Time of Day, 9 PM, Run Immediately.</li>
+            <li>Run it once and check this page. Then add a Personal Automation, Time of Day, 11:55 PM, Run Immediately.</li>
           </ol>
           <Button variant="ghost" size="sm" disabled={busy} onClick={() => open(true)}>Make a new key</Button>
         </div>
