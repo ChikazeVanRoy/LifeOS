@@ -10,7 +10,7 @@ import {
   signOut as fbSignOut,
   type User,
 } from "firebase/auth";
-import { collection, deleteDoc, doc, documentId, getDoc, getDocs, getFirestore, limit, orderBy, query, runTransaction, setDoc } from "firebase/firestore";
+import { collection, deleteDoc, doc, documentId, getDoc, getDocs, getFirestore, query, runTransaction, setDoc, where } from "firebase/firestore";
 import { parseImport } from "./io";
 
 /**
@@ -172,8 +172,11 @@ export const num = (value: unknown) => {
 
 export const readHealth = async (days = 14): Promise<HealthDay[]> => {
   if (!uid) return [];
-  const snap = await getDocs(query(collection(db(), "users", uid, "health"), orderBy(documentId(), "desc"), limit(days)));
-  return snap.docs.map((d) => {
+  // A plain range on the date-named ids needs no index; the newest days are picked after.
+  const from = new Date(Date.now() - (days + 2) * 86_400_000).toLocaleDateString("en-CA");
+  const snap = await getDocs(query(collection(db(), "users", uid, "health"), where(documentId(), ">=", from)));
+  const docs = snap.docs.sort((a, b) => (a.id < b.id ? 1 : -1)).slice(0, days);
+  return docs.map((d) => {
     const x = d.data();
     return { date: d.id, steps: num(x.steps), weight: num(x.weight), sleepHours: num(x.sleepHours), workoutMinutes: num(x.workoutMinutes) };
   });

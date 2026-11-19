@@ -40,9 +40,13 @@ export function HealthPanel() {
   const [days, setDays] = useState<HealthDay[] | null>(null);
   const [setup, setSetup] = useState<Awaited<ReturnType<typeof shortcutSetup>> | null>(null);
   const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState("");
 
   useEffect(() => {
-    readHealth(7).then(setDays, () => setDays([]));
+    readHealth(7).then(setDays, (e) => {
+      setFailed(e instanceof Error ? e.message : String(e));
+      setDays([]);
+    });
   }, []);
 
   const open = async (regenerate = false) => {
@@ -71,7 +75,7 @@ export function HealthPanel() {
       {days === null ? (
         <p className="text-xs text-muted-foreground">Loading…</p>
       ) : days.length === 0 ? (
-        <p className="text-xs text-muted-foreground">Nothing received yet.</p>
+        <p className="text-xs text-muted-foreground">{failed ? `Couldn't read the numbers: ${failed}` : "Nothing received yet."}</p>
       ) : (
         <table className="w-full text-xs tabular-nums">
           <thead className="text-muted-foreground">
