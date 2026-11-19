@@ -116,25 +116,6 @@ LifeOS can read your reading from Our Library (`../Library`), the shared book tr
 - Reading you log by hand wins for that day, so nothing counts twice. Imports are safe to repeat.
 - It needs the LifeOS server and an internet connection, and it never syncs in demo mode.
 
-## Hevy
-
-LifeOS can import your workouts from [Hevy](https://hevy.com). Connect it from Settings, under Integrations, and choose the goal workouts count towards.
-
-1. In Hevy, create an API key (Settings → Developer). Hevy only offers this with a Pro subscription.
-2. Add it to `.env.local` in this folder (it is git-ignored):
-
-   ```
-   HEVY_API_KEY=your-key
-   ```
-
-3. Restart LifeOS (`npm run service:restart`), then connect in Settings.
-
-- The key stays on the server in `src/app/api/hevy/route.ts`, which only answers this computer. Only workout times, exercises, sets, reps and weights come across, never notes or routines.
-- Each workout is one entry, dated and timed in your timezone. Identical working sets become one row (3 x 5 at 80), and warm-ups are left out. Weights follow your unit in Settings (Hevy sends kg).
-- A workout edited in Hevy updates its entry, and one deleted there is removed. Imports are safe to repeat.
-- A day logged by hand wins, so a session never counts twice. Two Hevy workouts on the same day both count.
-- It checks every few minutes and when the window opens. It needs the LifeOS server and an internet connection, and never syncs in demo mode.
-
 ## Not connected yet
 
-Apple Health and Calendar are planned extensions. None of them are integrated.
+Calendar is a planned extension and is not integrated. Apple Health arrives through an iPhone Shortcut: see Settings, Apple Health.

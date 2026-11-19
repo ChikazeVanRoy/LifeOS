@@ -5,7 +5,6 @@ import { create } from "zustand";
 import { createEmptyData, localeDefaults, milestonesForGoal, roadmapFromTemplate, type RoadmapTemplate } from "./defaults";
 import { createDemoData } from "./demo";
 import { importAnki, type AnkiFeed, type ImportResult } from "./engine/anki";
-import { importHevy, type HevyFeed, type HevyImportResult } from "./engine/hevy";
 import { importLibrary, type LibraryFeed, type LibraryImportResult } from "./engine/library";
 import { addDays, deviceTimezone, resolveTz, todayIn } from "./engine/dates";
 import { withSchedule } from "./engine/streaks";
@@ -93,11 +92,6 @@ interface State {
   connectLibrary: (feed: LibraryFeed, goalId: string) => LibraryImportResult;
   syncLibraryFeed: (feed: LibraryFeed) => void;
   disconnectLibrary: (keepHistory: boolean) => void;
-
-  /** First import. Quiet, because old workouts are not news. */
-  connectHevy: (feed: HevyFeed, goalId: string) => HevyImportResult;
-  syncHevyFeed: (feed: HevyFeed) => void;
-  disconnectHevy: (keepHistory: boolean) => void;
 
   startTimer: (goalId: string, typeId: string | null) => void;
   pauseTimer: () => void;
@@ -278,7 +272,6 @@ export const useStore = create<State>()((set, get) => {
         pauses: d.pauses.filter((p) => p.goalId !== id),
         anki: d.anki && { ...d.anki, mapping: Object.fromEntries(Object.entries(d.anki.mapping).filter(([, goalId]) => goalId !== id)) },
         library: d.library?.goalId === id ? null : d.library,
-        hevy: d.hevy?.goalId === id ? null : d.hevy,
         timer: d.timer?.goalId === id ? null : d.timer,
       })),
 
@@ -409,31 +402,6 @@ export const useStore = create<State>()((set, get) => {
         library: null,
         // Kept entries become ordinary ones, and count as logged by hand if Library is connected again.
         logs: keepHistory ? d.logs.map((l) => (l.source === "library" ? { ...l, source: undefined } : l)) : d.logs.filter((l) => l.source !== "library"),
-      })),
-
-    connectHevy: (feed, goalId) => {
-      const d = get().data;
-      const tz = tzNow(d.settings);
-      const result = importHevy({ feed, goalId, goals: d.goals, logs: d.logs, today: todayIn(tz), tz, weightUnit: d.settings.weightUnit, now: Date.now() });
-      update((x) => ({ ...x, logs: result.logs, hevy: { goalId, connectedAt: new Date().toISOString() } }));
-      return result;
-    },
-    syncHevyFeed: (feed) => {
-      const d = get().data;
-      if (!d.hevy || get().mode !== "real") return;
-      const tz = tzNow(d.settings);
-      const today = todayIn(tz);
-      const result = importHevy({ feed, goalId: d.hevy.goalId, goals: d.goals, logs: d.logs, today, tz, weightUnit: d.settings.weightUnit, now: Date.now() });
-      if (result.added + result.updated + result.removed === 0) return;
-      const recent = result.changedDates.some((date) => date >= addDays(today, -6));
-      update((x) => ({ ...x, logs: result.logs }), recent);
-    },
-    disconnectHevy: (keepHistory) =>
-      update((d) => ({
-        ...d,
-        hevy: null,
-        // Kept entries become ordinary ones, and count as logged by hand if Hevy is connected again.
-        logs: keepHistory ? d.logs.map((l) => (l.source === "hevy" ? { ...l, source: undefined } : l)) : d.logs.filter((l) => l.source !== "hevy"),
       })),
 
     startTimer: (goalId, typeId) => {

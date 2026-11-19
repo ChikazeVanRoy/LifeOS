@@ -5,7 +5,6 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { AnkiPanel } from "@/components/anki-panel";
 import { HealthPanel } from "@/components/health-panel";
-import { HevyPanel } from "@/components/hevy-panel";
 import { LibraryPanel } from "@/components/library-panel";
 import { GoalEditor } from "@/components/goals/goal-editor";
 import { useDerived } from "@/components/shell/providers";
@@ -325,10 +324,9 @@ export function SettingsPage() {
           </Row>
         </Group>
 
-        <Group title="Integrations" description="Anki connects through Anki Analytics, Library is our book tracker, and Hevy brings in workouts. The others are planned for later.">
+        <Group title="Integrations" description="Anki connects through Anki Analytics, and Library is our book tracker. The others are planned for later.">
           <AnkiPanel />
           <LibraryPanel />
-          <HevyPanel />
           {cloudEnabled && <HealthPanel />}
           {["Apple Health", "Calendar"].map((n) => (
             <Row key={n} label={n}><span className="text-xs text-muted-foreground">Not connected</span></Row>

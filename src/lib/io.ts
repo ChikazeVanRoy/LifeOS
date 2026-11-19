@@ -142,11 +142,6 @@ const appData = z.object({
     .nullable()
     .optional()
     .transform((link) => link ?? null),
-  hevy: z
-    .object({ goalId: z.string(), connectedAt: z.string() })
-    .nullable()
-    .optional()
-    .transform((link) => link ?? null),
 });
 
 export interface ExportFile {

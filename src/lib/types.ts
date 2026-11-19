@@ -194,12 +194,6 @@ export interface LibraryLink {
   seen: Record<string, number>;
 }
 
-/** The link to Hevy. Holds the goal that receives workouts, never the API key. */
-export interface HevyLink {
-  goalId: string;
-  connectedAt: string;
-}
-
 export type ThemePref = "system" | "light" | "dark";
 export type WeightUnit = "kg" | "lb";
 
@@ -229,5 +223,4 @@ export interface AppData {
   timer: Timer | null;
   anki: AnkiLink | null;
   library: LibraryLink | null;
-  hevy: HevyLink | null;
 }
