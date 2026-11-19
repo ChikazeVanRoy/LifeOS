@@ -14,6 +14,7 @@ import { connectFile, pushToFile, realKey, reconcile, rereadRevision } from "./f
 import { createLog, type NewLog } from "./log";
 import { migrate } from "./migrate";
 import { storage } from "./storage";
+import { useUI } from "./ui";
 import type {
   AppData,
   Goal,
@@ -158,6 +159,8 @@ const loadReal = async () => {
   if (cloudEnabled && !hasData(local)) local = await offerDeviceData();
   const { data, notice } = await reconcile(local, hasData(local));
   if (notice) toast(notice);
+  // Starting over would look like lost data, and the next save would try to replace the real copy.
+  if (cloudEnabled && !data && useUI.getState().fileStatus.state === "browser") throw new Error("Could not reach the account");
   return data;
 };
 
@@ -187,7 +190,13 @@ export const useStore = create<State>()((set, get) => {
     hydrate: async () => {
       const mode = (await storage.read<Mode>(MODE_KEY)) === "demo" ? "demo" : "real";
       const today = todayIn(deviceTimezone());
-      const saved = mode === "real" ? await loadReal() : (migrate(await storage.read(keyFor("demo"))) as AppData | undefined);
+      let saved: AppData | undefined;
+      try {
+        saved = mode === "real" ? await loadReal() : (migrate(await storage.read(keyFor("demo"))) as AppData | undefined);
+      } catch {
+        toast.error("Can't load your account right now. Check your connection, then close and reopen LifeOS.", { duration: Infinity });
+        return;
+      }
       // Setup that was never finished holds nothing worth keeping, so it starts over.
       const stored = hasData(saved) ? saved : undefined;
       const data = stored ?? (mode === "demo" ? createDemoData(today) : freshData(today));
