@@ -4,6 +4,7 @@ import { ArrowDown, ArrowUp, Download, RefreshCw, FlaskConical, FolderOpen, Penc
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { AnkiPanel } from "@/components/anki-panel";
+import { HealthPanel } from "@/components/health-panel";
 import { HevyPanel } from "@/components/hevy-panel";
 import { LibraryPanel } from "@/components/library-panel";
 import { GoalEditor } from "@/components/goals/goal-editor";
@@ -328,6 +329,7 @@ export function SettingsPage() {
           <AnkiPanel />
           <LibraryPanel />
           <HevyPanel />
+          {cloudEnabled && <HealthPanel />}
           {["Apple Health", "Calendar"].map((n) => (
             <Row key={n} label={n}><span className="text-xs text-muted-foreground">Not connected</span></Row>
           ))}

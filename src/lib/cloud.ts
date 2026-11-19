@@ -10,7 +10,7 @@ import {
   signOut as fbSignOut,
   type User,
 } from "firebase/auth";
-import { deleteDoc, doc, getFirestore, runTransaction, setDoc } from "firebase/firestore";
+import { collection, deleteDoc, doc, documentId, getDocs, getFirestore, limit, orderBy, query, runTransaction, setDoc } from "firebase/firestore";
 import { parseImport } from "./io";
 
 /**
@@ -148,3 +148,35 @@ export const removeDevice = async (id: string) => {
 };
 
 export const firebaseApp = app;
+
+/** One day of numbers from Apple Health, written by an iPhone Shortcut. Every field is optional. */
+export interface HealthDay {
+  date: string;
+  steps?: number;
+  weight?: number;
+  sleepHours?: number;
+  workoutMinutes?: number;
+}
+
+/** Shortcuts can only send text, and may format numbers with commas, so both are accepted. */
+const num = (value: unknown) => {
+  const n = typeof value === "number" ? value : typeof value === "string" ? parseFloat(value.replace(/,/g, "")) : NaN;
+  return Number.isFinite(n) ? n : undefined;
+};
+
+export const readHealth = async (days = 14): Promise<HealthDay[]> => {
+  if (!uid) return [];
+  const snap = await getDocs(query(collection(db(), "users", uid, "health"), orderBy(documentId(), "desc"), limit(days)));
+  return snap.docs.map((d) => {
+    const x = d.data();
+    return { date: d.id, steps: num(x.steps), weight: num(x.weight), sleepHours: num(x.sleepHours), workoutMinutes: num(x.workoutMinutes) };
+  });
+};
+
+/** What the Shortcut needs to sign in as this person without their password. Keep it private. */
+export const shortcutSetup = () => ({
+  uid,
+  projectId: config.projectId ?? "",
+  apiKey: config.apiKey ?? "",
+  refreshToken: auth().currentUser?.refreshToken ?? "",
+});
