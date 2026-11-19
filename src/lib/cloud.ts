@@ -158,10 +158,16 @@ export interface HealthDay {
   workoutMinutes?: number;
 }
 
-/** Shortcuts can only send text, and may format numbers with commas, so both are accepted. */
-const num = (value: unknown) => {
-  const n = typeof value === "number" ? value : typeof value === "string" ? parseFloat(value.replace(/,/g, "")) : NaN;
-  return Number.isFinite(n) ? n : undefined;
+/**
+ * Shortcuts can only send text. A single number may have commas. For steps and exercise the Shortcut
+ * sends every sample of the day separated by spaces ("2 58 71"), and the day's total is their sum.
+ */
+export const num = (value: unknown) => {
+  if (typeof value === "number") return Number.isFinite(value) ? value : undefined;
+  if (typeof value !== "string") return undefined;
+  const parts = value.trim().split(/\s+/).map((p) => parseFloat(p.replace(/,/g, "")));
+  if (!parts.length || parts.some((n) => !Number.isFinite(n))) return undefined;
+  return parts.reduce((a, b) => a + b, 0);
 };
 
 export const readHealth = async (days = 14): Promise<HealthDay[]> => {
