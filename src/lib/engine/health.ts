@@ -11,6 +11,9 @@ export interface HealthImport {
   changedDates: ISODate[];
 }
 
+/** Apple Health counts a brisk walk to the bus as exercise. Days with less than this are not a workout. */
+export const HEALTH_MIN_MINUTES = 10;
+
 /** The goal exercise minutes belong to: the default Fitness goal, or any active goal named Fitness. */
 export const fitnessGoal = (goals: Goal[]) =>
   goals.find((g) => g.id === "fitness" && !g.archived) ?? goals.find((g) => !g.archived && g.name.trim().toLowerCase() === "fitness");
@@ -19,12 +22,15 @@ export const fitnessGoal = (goals: Goal[]) =>
  * Turns each day's exercise minutes from Apple Health into one Fitness entry for that day.
  * - the entry follows the number: a later run with more minutes updates it
  * - a workout logged by hand wins for that day, so minutes never count twice, and any import there is removed
- * - days with no exercise add nothing, and days after today are ignored
+ * - days under the minimum (10 minutes, or the goal's minimum session if higher) add nothing, and an
+ *   import already there for such a day is removed
+ * - days after today are ignored
  */
 export const importHealth = ({ days, goals, logs, today, tz, now }: { days: HealthMinutes[]; goals: Goal[]; logs: LogEntry[]; today: ISODate; tz: string; now: number }): HealthImport => {
   const goal = fitnessGoal(goals);
   if (!goal) return { logs, changed: false, changedDates: [] };
 
+  const floor = Math.max(HEALTH_MIN_MINUTES, goal.minMinutes || 0);
   const typeId = goal.activityTypes.find((t) => t.id === "cardio")?.id ?? null;
   const byHand = new Set(logs.filter((l) => !l.source && l.goalId === goal.id).map((l) => l.date));
   const existing = new Map(logs.filter((l) => l.source === "health" && l.goalId === goal.id).map((l) => [l.id, l]));
@@ -45,7 +51,13 @@ export const importHealth = ({ days, goals, logs, today, tz, now }: { days: Heal
       continue;
     }
     const minutes = Math.round(day.workoutMinutes ?? 0);
-    if (!(minutes > 0)) continue;
+    if (!(minutes >= floor)) {
+      if (old) {
+        replaced.set(id, null);
+        changedDates.push(day.date);
+      }
+      continue;
+    }
     if (!old) {
       fresh.push({ id, goalId: goal.id, typeId, date: day.date, time: null, tz, minutes, metrics: {}, note: "From Apple Health", source: "health", createdAt: now, updatedAt: now });
       changedDates.push(day.date);

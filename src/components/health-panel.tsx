@@ -69,7 +69,7 @@ export function HealthPanel() {
     <div className="space-y-3 py-3">
       <div>
         <p className="text-sm">Apple Health</p>
-        <p className="text-xs text-muted-foreground">A Shortcut on your iPhone sends each day&apos;s steps and exercise minutes here. Nothing else leaves Health.</p>
+        <p className="text-xs text-muted-foreground">A Shortcut on your iPhone sends each day&apos;s steps and exercise minutes here. Nothing else leaves Health. A day with at least 10 exercise minutes, or your Fitness goal&apos;s minimum session if higher, becomes a Fitness entry.</p>
       </div>
 
       {days === null ? (

@@ -37,4 +37,19 @@ describe("importHealth", () => {
     const none = importHealth({ days: [{ date: "2026-11-19", workoutMinutes: 30 }], goals: [], logs: [], today: "2026-11-19", tz: "UTC", now: 1 });
     expect(none.changed).toBe(false);
   });
+
+  it("skips days under 10 minutes, and removes an earlier import that falls under", () => {
+    expect(run([{ date: "2026-11-19", workoutMinutes: 1 }, { date: "2026-11-18", workoutMinutes: 9.4 }]).logs).toHaveLength(0);
+    expect(run([{ date: "2026-11-19", workoutMinutes: 10 }]).logs).toHaveLength(1);
+    const first = run([{ date: "2026-11-19", workoutMinutes: 30 }]);
+    const shrunk = run([{ date: "2026-11-19", workoutMinutes: 1 }], first.logs);
+    expect(shrunk.changed).toBe(true);
+    expect(shrunk.logs).toHaveLength(0);
+  });
+
+  it("uses the goal's minimum session when it is higher", () => {
+    const strict = { ...goal, minMinutes: 20 };
+    const r = importHealth({ days: [{ date: "2026-11-19", workoutMinutes: 15 }, { date: "2026-11-18", workoutMinutes: 25 }], goals: [strict], logs: [], today: "2026-11-19", tz: "UTC", now: 5 });
+    expect(r.logs.map((l) => l.date)).toEqual(["2026-11-18"]);
+  });
 });
