@@ -32,7 +32,7 @@ export function ActivityRow({ log, d, showDate }: { log: LogEntry; d: Derived; s
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5 text-sm font-medium">
           <span className="truncate">{title}</span>
-          {imported && <span className="shrink-0 rounded-md bg-secondary px-1.5 text-[10.5px] leading-[18px] font-normal text-muted-foreground">{{ library: "Library", hevy: "Hevy", anki: "Anki" }[log.source!]}</span>}
+          {imported && <span className="shrink-0 rounded-md bg-secondary px-1.5 text-[10.5px] leading-[18px] font-normal text-muted-foreground">{{ library: "Library", hevy: "Hevy", anki: "Anki", health: "Apple Health" }[log.source!]}</span>}
         </span>
         <span className="block truncate text-xs text-muted-foreground">{meta || "Session"}{log.note ? ` · ${log.note}` : ""}</span>
       </span>

@@ -85,7 +85,7 @@ export interface LogEntry {
   projectId?: string;
   exercises?: ExerciseEntry[];
   /** Set when an entry was imported. Imported entries are read-only and keep themselves up to date. */
-  source?: "anki" | "library" | "hevy";
+  source?: "anki" | "library" | "hevy" | "health";
   createdAt: number;
   updatedAt: number;
 }

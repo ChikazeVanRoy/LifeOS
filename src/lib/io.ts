@@ -53,7 +53,7 @@ const log = z.object({
   note: z.string().optional(),
   projectId: z.string().optional(),
   exercises: z.array(z.object({ exercise: z.string(), sets: nonNeg, reps: nonNeg, kg: nonNeg })).optional(),
-  source: z.enum(["anki", "library", "hevy"]).optional(),
+  source: z.enum(["anki", "library", "hevy", "health"]).optional(),
   createdAt: z.number(),
   updatedAt: z.number(),
 });

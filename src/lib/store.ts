@@ -5,6 +5,7 @@ import { create } from "zustand";
 import { createEmptyData, localeDefaults, milestonesForGoal, roadmapFromTemplate, type RoadmapTemplate } from "./defaults";
 import { createDemoData } from "./demo";
 import { importAnki, type AnkiFeed, type ImportResult } from "./engine/anki";
+import { importHealth, type HealthMinutes } from "./engine/health";
 import { importLibrary, type LibraryFeed, type LibraryImportResult } from "./engine/library";
 import { addDays, deviceTimezone, resolveTz, todayIn } from "./engine/dates";
 import { withSchedule } from "./engine/streaks";
@@ -85,6 +86,8 @@ interface State {
   /** First import. Quiet, because old reviews are not news. */
   connectAnki: (feed: AnkiFeed, mapping: Record<string, string>) => ImportResult;
   syncAnkiFeed: (feed: AnkiFeed) => void;
+  /** Puts each day's Apple Health exercise minutes into the Fitness goal. */
+  syncHealth: (days: HealthMinutes[]) => void;
   remapAnki: (feed: AnkiFeed, mapping: Record<string, string>) => void;
   disconnectAnki: (keepHistory: boolean) => void;
 
@@ -351,6 +354,13 @@ export const useStore = create<State>()((set, get) => {
         goals: result.goals,
         anki: x.anki && { ...x.anki, importedThrough: feed.generatedAt, dayStartHour: feed.dayStartHour },
       }), recent);
+    },
+    syncHealth: (days) => {
+      const d = get().data;
+      if (get().mode !== "real") return;
+      const tz = tzNow(d.settings);
+      const result = importHealth({ days, goals: d.goals, logs: d.logs, today: todayIn(tz), tz, now: Date.now() });
+      if (result.changed) update((x) => ({ ...x, logs: result.logs }));
     },
     remapAnki: (feed, mapping) => {
       const d = get().data;
