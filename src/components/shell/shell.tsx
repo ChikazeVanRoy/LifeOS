@@ -127,7 +127,7 @@ function BottomNav() {
 
 function MobileTop() {
   return (
-    <div className="sticky top-0 z-20 -mx-4 mb-3 flex h-12 items-center justify-between bg-background px-4 md:hidden" style={{ paddingTop: "env(safe-area-inset-top)", boxSizing: "content-box" }}>
+    <div className="-mx-4 mb-3 flex h-12 items-center justify-between bg-background px-4 md:hidden" style={{ paddingTop: "env(safe-area-inset-top)", boxSizing: "content-box" }}>
       <Link href="/"><Logo size={22} /></Link>
       <div className="flex items-center gap-0.5 text-muted-foreground">
         <Link href="/roadmaps" aria-label="Roadmaps" className="grid size-10 place-items-center"><Mountain size={20} strokeWidth={1.8} /></Link>
