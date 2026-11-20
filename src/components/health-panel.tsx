@@ -69,7 +69,7 @@ export function HealthPanel() {
     <div className="space-y-3 py-3">
       <div>
         <p className="text-sm">Apple Health</p>
-        <p className="text-xs text-muted-foreground">A Shortcut on your iPhone sends each day&apos;s steps, weight, workouts and sleep here. Nothing else leaves Health.</p>
+        <p className="text-xs text-muted-foreground">A Shortcut on your iPhone sends each day&apos;s steps and exercise minutes here. Nothing else leaves Health.</p>
       </div>
 
       {days === null ? (
@@ -107,8 +107,9 @@ export function HealthPanel() {
           <ol className="list-decimal space-y-1.5 pl-4 text-muted-foreground">
             <li>In Shortcuts, make a new shortcut. Add <b>Format Date</b> on the current date, Date Format Custom, <code>yyyy-MM-dd</code>.</li>
             <li>Add <b>Number</b> <code>0</code> then <b>Set Variable</b> <code>Steps</code>. Add <b>Number</b> <code>0</code> then <b>Set Variable</b> <code>Minutes</code>.</li>
-            <li>Add <b>Find Health Samples</b>: Type Step Count, Start Date is in the last 1 days. Add <b>If</b> it has any value, then <b>Calculate Statistics</b> (Sum), then <b>Set Variable</b> <code>Steps</code>, then <b>End If</b>.</li>
-            <li>Add <b>Find Health Samples</b>: Type Exercise Minutes, Start Date is in the last 1 days. Add <b>If</b> it has any value, then <b>Get Details</b> (Duration), <b>Calculate Statistics</b> (Sum), <b>Set Variable</b> <code>Minutes</code>, <b>End If</b>.</li>
+            <li>Add <b>Find Health Samples</b>: Type Step Count, Start Date <b>is today</b>, Group By <b>Day</b>. Add <b>If</b> it has any value, then <b>Get Details of Health Sample</b> (Value), <b>Calculate Statistics</b> (Sum), <b>Set Variable</b> <code>Steps</code>, <b>End If</b>.</li>
+            <li>Add <b>Find Health Samples</b>: Type Exercise Minutes, Start Date <b>is today</b>, Group By <b>Day</b>. Add <b>If</b> it has any value, then <b>Get Details of Health Sample</b> (Value, not Duration), <b>Calculate Statistics</b> (Sum), <b>Set Variable</b> <code>Minutes</code>, <b>End If</b>.</li>
+            <li className="list-none">Group By Day makes Health add up your iPhone and Apple Watch the way the Health app does, so the same steps aren&apos;t counted twice. <b>Is today</b> starts at midnight, while &quot;in the last 1 days&quot; reaches back into yesterday.</li>
             <li>Add <b>Text</b>: paste the message. Replace <code>STEPS</code> and <code>MINUTES</code> by tapping the <code>Steps</code> and <code>Minutes</code> variables.</li>
             <li>Add <b>Get Contents of URL</b>. For the address, paste the first part, then the <b>Formatted Date</b> variable, then paste the last part. Method <b>PATCH</b>, header <code>Content-Type</code> = <code>application/json</code>, request body <b>File</b> = the Text.</li>
             <li>Run it once and check this page. Then add a Personal Automation, Time of Day, 11:55 PM, Run Immediately.</li>
