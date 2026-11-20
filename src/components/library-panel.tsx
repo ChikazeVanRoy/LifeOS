@@ -70,6 +70,49 @@ function Connect({ feed }: { feed: LibraryFeed }) {
   );
 }
 
+function LibrarySignIn({ onDone }: { onDone: () => void }) {
+  const saved = getLibraryLink();
+  const [busy, setBusy] = useState(false);
+  return (
+    <LinkForm
+      busy={busy}
+      note="Library's address and public key are in Library's .env.local (VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY). The sign-in is your Library account. Kept on this device only, never in LifeOS's data or backups."
+      fields={[
+        { name: "url", label: "Library address (Supabase URL)", placeholder: "https://….supabase.co", initial: saved?.url },
+        { name: "anonKey", label: "Public key", initial: saved?.anonKey },
+        { name: "email", label: "Email", initial: saved?.email },
+        { name: "password", label: "Password", type: "password", initial: saved?.password },
+        { name: "person", label: "Whose reading to follow", initial: saved?.person ?? "chikaze" },
+      ]}
+      onSave={async (v) => {
+        let url: string;
+        try {
+          const u = new URL(v.url);
+          if (u.protocol !== "https:") throw new Error();
+          url = u.origin;
+        } catch {
+          toast.error("The Library address must be a valid https address.");
+          return;
+        }
+        saveLibraryLink({ url, anonKey: v.anonKey, email: v.email, password: v.password, person: v.person.toLowerCase() });
+        setBusy(true);
+        const r = await checkLibrary();
+        setBusy(false);
+        if (r.available) onDone();
+      }}
+      onForget={
+        saved
+          ? () => {
+              saveLibraryLink(null);
+              onDone();
+              void checkLibrary();
+            }
+          : undefined
+      }
+    />
+  );
+}
+
 function Connected() {
   const link = useStore((s) => s.data.library)!;
   const logs = useStore((s) => s.data.logs);
@@ -78,6 +121,7 @@ function Connected() {
   const { disconnectLibrary } = useStore.getState();
   const [leaving, setLeaving] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [signing, setSigning] = useState(false);
 
   const imported = logs.filter((l) => l.source === "library");
   const books = imported.filter((l) => l.id.startsWith("library:done:")).length;
@@ -110,9 +154,14 @@ function Connected() {
           >
             <RefreshCw className={busy ? "animate-spin" : undefined} /> Sync
           </Button>
+          {(!check || !check.available || getLibraryLink()) && (
+            <Button variant="secondary" size="sm" aria-expanded={signing} onClick={() => setSigning((v) => !v)}>Sign-in</Button>
+          )}
           <Button variant="ghost" size="sm" onClick={() => setLeaving(true)}>Disconnect</Button>
         </div>
       </div>
+
+      {signing && <LibrarySignIn onDone={() => setSigning(false)} />}
 
       <AlertDialog open={leaving} onOpenChange={setLeaving}>
         <AlertDialogContent>
@@ -180,44 +229,7 @@ export function LibraryPanel() {
           </Button>
         </div>
       </div>
-      {signing && (
-        <LinkForm
-          busy={retrying}
-          note="Library's address and public key are in Library's .env.local (VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY). The sign-in is your Library account. Kept on this device only, never in LifeOS's data or backups."
-          fields={[
-            { name: "url", label: "Library address (Supabase URL)", placeholder: "https://….supabase.co", initial: saved?.url },
-            { name: "anonKey", label: "Public key", initial: saved?.anonKey },
-            { name: "email", label: "Email", initial: saved?.email },
-            { name: "password", label: "Password", type: "password", initial: saved?.password },
-            { name: "person", label: "Whose reading to follow", initial: saved?.person ?? "chikaze" },
-          ]}
-          onSave={async (v) => {
-            let url: string;
-            try {
-              const u = new URL(v.url);
-              if (u.protocol !== "https:") throw new Error();
-              url = u.origin;
-            } catch {
-              toast.error("The Library address must be a valid https address.");
-              return;
-            }
-            saveLibraryLink({ url, anonKey: v.anonKey, email: v.email, password: v.password, person: v.person.toLowerCase() });
-            setRetrying(true);
-            const r = await checkLibrary();
-            setRetrying(false);
-            if (r.available) setSigning(false);
-          }}
-          onForget={
-            saved
-              ? () => {
-                  saveLibraryLink(null);
-                  setSigning(false);
-                  void checkLibrary();
-                }
-              : undefined
-          }
-        />
-      )}
+      {signing && <LibrarySignIn onDone={() => setSigning(false)} />}
     </div>
   );
 }

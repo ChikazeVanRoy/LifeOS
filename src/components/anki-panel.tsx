@@ -101,6 +101,39 @@ function Connect({ feed }: { feed: AnkiFeed }) {
   );
 }
 
+function AnkiSignIn({ onDone }: { onDone: () => void }) {
+  const saved = getAnkiLink();
+  const [busy, setBusy] = useState(false);
+  return (
+    <LinkForm
+      busy={busy}
+      note="From Anki Analytics' Firebase setup (data/cloud.json in its folder, and the password you gave `npm run cloud -- login`). Kept on this device only, never in LifeOS's data or backups."
+      fields={[
+        { name: "projectId", label: "Firebase project id", initial: saved?.projectId },
+        { name: "apiKey", label: "Web API key", initial: saved?.apiKey },
+        { name: "email", label: "Email", initial: saved?.email },
+        { name: "password", label: "Password", type: "password", initial: saved?.password },
+      ]}
+      onSave={async (v) => {
+        saveAnkiLink({ projectId: v.projectId, apiKey: v.apiKey, email: v.email, password: v.password });
+        setBusy(true);
+        const r = await checkAnki();
+        setBusy(false);
+        if (r.available) onDone();
+      }}
+      onForget={
+        saved
+          ? () => {
+              saveAnkiLink(null);
+              onDone();
+              void checkAnki();
+            }
+          : undefined
+      }
+    />
+  );
+}
+
 function Connected({ feed }: { feed: AnkiFeed | null }) {
   const link = useStore((s) => s.data.anki)!;
   const logs = useStore((s) => s.data.logs);
@@ -111,6 +144,7 @@ function Connected({ feed }: { feed: AnkiFeed | null }) {
   const [mapping, setMapping] = useState(link.mapping);
   const [leaving, setLeaving] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [signing, setSigning] = useState(false);
 
   const imported = logs.filter((l) => l.source === "anki");
   const minutes = imported.reduce((s, l) => s + l.minutes, 0);
@@ -150,6 +184,9 @@ function Connected({ feed }: { feed: AnkiFeed | null }) {
             <RefreshCw className={busy ? "animate-spin" : undefined} /> Sync
           </Button>
           {feed && <Button variant="secondary" size="sm" aria-expanded={editing} onClick={() => setEditing((v) => !v)}>Decks</Button>}
+          {(!check || !check.available || getAnkiLink()) && (
+            <Button variant="secondary" size="sm" aria-expanded={signing} onClick={() => setSigning((v) => !v)}>Sign-in</Button>
+          )}
           <Button variant="ghost" size="sm" onClick={() => setLeaving(true)}>Disconnect</Button>
         </div>
       </div>
@@ -168,6 +205,8 @@ function Connected({ feed }: { feed: AnkiFeed | null }) {
           </Button>
         </div>
       )}
+
+      {signing && <AnkiSignIn onDone={() => setSigning(false)} />}
 
       <AlertDialog open={leaving} onOpenChange={setLeaving}>
         <AlertDialogContent>
@@ -235,34 +274,7 @@ export function AnkiPanel() {
           </Button>
         </div>
       </div>
-      {signing && (
-        <LinkForm
-          busy={retrying}
-          note="From Anki Analytics' Firebase setup (data/cloud.json in its folder, and the password you gave `npm run cloud -- login`). Kept on this device only, never in LifeOS's data or backups."
-          fields={[
-            { name: "projectId", label: "Firebase project id", initial: saved?.projectId },
-            { name: "apiKey", label: "Web API key", initial: saved?.apiKey },
-            { name: "email", label: "Email", initial: saved?.email },
-            { name: "password", label: "Password", type: "password", initial: saved?.password },
-          ]}
-          onSave={async (v) => {
-            saveAnkiLink({ projectId: v.projectId, apiKey: v.apiKey, email: v.email, password: v.password });
-            setRetrying(true);
-            const r = await checkAnki();
-            setRetrying(false);
-            if (r.available) setSigning(false);
-          }}
-          onForget={
-            saved
-              ? () => {
-                  saveAnkiLink(null);
-                  setSigning(false);
-                  void checkAnki();
-                }
-              : undefined
-          }
-        />
-      )}
+      {signing && <AnkiSignIn onDone={() => setSigning(false)} />}
     </div>
   );
 }
