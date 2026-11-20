@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { fmtFull } from "@/lib/engine/dates";
 import { importLibrary, suggestLibraryGoal, type LibraryFeed } from "@/lib/engine/library";
 import { checkLibrary, syncLibrary } from "@/lib/library-sync";
-import { getLibraryLink, saveLibraryLink } from "@/lib/links";
+import { getLibraryLink, libraryBuiltIn, saveLibraryLink } from "@/lib/links";
 import { useStore } from "@/lib/store";
 import { useUI } from "@/lib/ui";
 import { fmtHours, plural } from "@/lib/utils";
@@ -76,25 +76,18 @@ function LibrarySignIn({ onDone }: { onDone: () => void }) {
   return (
     <LinkForm
       busy={busy}
-      note="Library's address and public key are in Library's .env.local (VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY). The sign-in is your Library account. Kept on this device only, never in LifeOS's data or backups."
+      note={
+        libraryBuiltIn
+          ? "Your Library account. Kept on this device only, never in LifeOS's data or backups."
+          : "This copy of LifeOS was built without Library beside it, so it cannot find Library's database."
+      }
       fields={[
-        { name: "url", label: "Library address (Supabase URL)", placeholder: "https://….supabase.co", initial: saved?.url },
-        { name: "anonKey", label: "Public key", initial: saved?.anonKey },
         { name: "email", label: "Email", initial: saved?.email },
         { name: "password", label: "Password", type: "password", initial: saved?.password },
         { name: "person", label: "Whose reading to follow", initial: saved?.person ?? "chikaze" },
       ]}
       onSave={async (v) => {
-        let url: string;
-        try {
-          const u = new URL(v.url);
-          if (u.protocol !== "https:") throw new Error();
-          url = u.origin;
-        } catch {
-          toast.error("The Library address must be a valid https address.");
-          return;
-        }
-        saveLibraryLink({ url, anonKey: v.anonKey, email: v.email, password: v.password, person: v.person.toLowerCase() });
+        saveLibraryLink({ email: v.email, password: v.password, person: v.person });
         setBusy(true);
         const r = await checkLibrary();
         setBusy(false);

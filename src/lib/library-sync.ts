@@ -3,19 +3,19 @@
 import { useEffect } from "react";
 import type { LibraryCheck } from "./engine/library";
 import { fetchLibrary, LibraryError } from "./library-fetch";
-import { getLibraryLink } from "./links";
+import { libraryConfig } from "./links";
 import { useStore } from "./store";
 import { useUI } from "./ui";
 
 const hosted = !!process.env.NEXT_PUBLIC_STATIC;
 const offline: LibraryCheck = {
   available: false,
-  reason: hosted ? "Connect Library below to bring in your reading." : "Library could not be reached from this computer.",
+  reason: hosted ? "Sign in with your Library account to bring in your reading." : "Library could not be reached from this computer.",
 };
 
 /** Reads Library straight from the browser with the sign-in saved on this device. */
 const checkDirect = async (): Promise<LibraryCheck | null> => {
-  const link = getLibraryLink();
+  const link = libraryConfig();
   if (!link) return null;
   try {
     return { available: true, feed: await fetchLibrary(link) };

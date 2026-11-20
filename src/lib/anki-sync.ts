@@ -3,14 +3,14 @@
 import { useEffect } from "react";
 import { readAnkiCloud } from "./anki-cloud";
 import type { AnkiCheck } from "./engine/anki";
-import { getAnkiLink } from "./links";
+import { ankiConfig } from "./links";
 import { useStore } from "./store";
 import { useUI } from "./ui";
 
 const hosted = !!process.env.NEXT_PUBLIC_STATIC;
 const offline: AnkiCheck = {
   available: false,
-  reason: hosted ? "Connect Anki Analytics' Firebase below to bring in your reviews." : "Anki Analytics is not running on this computer.",
+  reason: hosted ? "Sign in with your Anki Analytics account to bring in your reviews." : "Anki Analytics is not running on this computer.",
 };
 
 const call = async (method: "GET" | "POST"): Promise<AnkiCheck> => {
@@ -23,7 +23,7 @@ export const checkAnki = async (): Promise<AnkiCheck> => {
   // The hosted site has no server to ask, so it reads what Anki Analytics uploaded to Firebase.
   // On this computer the local route is tried first, and a sign-in saved here is the fallback.
   const local = hosted ? null : await checkLocal();
-  const link = getAnkiLink();
+  const link = ankiConfig();
   const result = local?.available ? local : link ? await readAnkiCloud(link) : (local ?? offline);
   useUI.getState().setAnkiCheck(result);
   return result;

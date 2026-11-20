@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { checkAnki, syncAnki } from "@/lib/anki-sync";
 import { formatDayStart, importAnki, suggestMapping, type AnkiFeed } from "@/lib/engine/anki";
 import { fmtFull } from "@/lib/engine/dates";
-import { getAnkiLink, saveAnkiLink } from "@/lib/links";
+import { ankiBuiltIn, getAnkiLink, saveAnkiLink } from "@/lib/links";
 import { useStore } from "@/lib/store";
 import { useUI } from "@/lib/ui";
 import { fmtHours, plural } from "@/lib/utils";
@@ -107,15 +107,17 @@ function AnkiSignIn({ onDone }: { onDone: () => void }) {
   return (
     <LinkForm
       busy={busy}
-      note="From Anki Analytics' Firebase setup (data/cloud.json in its folder, and the password you gave `npm run cloud -- login`). Kept on this device only, never in LifeOS's data or backups."
+      note={
+        ankiBuiltIn
+          ? "The account you sign in to Anki Analytics with on your phone. Kept on this device only, never in LifeOS's data or backups."
+          : "This copy of LifeOS was built without Anki Analytics beside it, so it cannot find its Firebase project."
+      }
       fields={[
-        { name: "projectId", label: "Firebase project id", initial: saved?.projectId },
-        { name: "apiKey", label: "Web API key", initial: saved?.apiKey },
         { name: "email", label: "Email", initial: saved?.email },
         { name: "password", label: "Password", type: "password", initial: saved?.password },
       ]}
       onSave={async (v) => {
-        saveAnkiLink({ projectId: v.projectId, apiKey: v.apiKey, email: v.email, password: v.password });
+        saveAnkiLink({ email: v.email, password: v.password });
         setBusy(true);
         const r = await checkAnki();
         setBusy(false);
