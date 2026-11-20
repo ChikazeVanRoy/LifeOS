@@ -5,10 +5,12 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useDerived } from "@/components/shell/providers";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { LinkForm } from "@/components/link-form";
 import { Button } from "@/components/ui/button";
 import { fmtFull } from "@/lib/engine/dates";
 import { importLibrary, suggestLibraryGoal, type LibraryFeed } from "@/lib/engine/library";
 import { checkLibrary, syncLibrary } from "@/lib/library-sync";
+import { getLibraryLink, saveLibraryLink } from "@/lib/links";
 import { useStore } from "@/lib/store";
 import { useUI } from "@/lib/ui";
 import { fmtHours, plural } from "@/lib/utils";
@@ -136,6 +138,7 @@ export function LibraryPanel() {
   const mode = useStore((s) => s.mode);
   const check = useUI((s) => s.libraryCheck);
   const [retrying, setRetrying] = useState(false);
+  const [signing, setSigning] = useState(false);
 
   useEffect(() => {
     if (mode === "real") void checkLibrary();
@@ -151,24 +154,70 @@ export function LibraryPanel() {
   }
   if (linked) return <Connected />;
   if (check?.available) return <Connect key={check.feed.generatedAt} feed={check.feed} />;
+  const saved = getLibraryLink();
   return (
-    <div className="flex min-h-14 flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
-      <div className="min-w-0">
-        <p className="text-sm">Library</p>
-        <p className="text-xs text-muted-foreground">{check ? check.reason : "Looking for Library…"}</p>
+    <div>
+      <div className="flex min-h-14 flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
+        <div className="min-w-0">
+          <p className="text-sm">Library</p>
+          <p className="text-xs text-muted-foreground">{check ? check.reason : "Looking for Library…"}</p>
+        </div>
+        <div className="flex gap-1.5">
+          <Button variant="secondary" size="sm" aria-expanded={signing} onClick={() => setSigning((v) => !v)}>
+            {saved ? "Sign-in" : "Connect"}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={retrying}
+            onClick={async () => {
+              setRetrying(true);
+              await checkLibrary();
+              setRetrying(false);
+            }}
+          >
+            Check again
+          </Button>
+        </div>
       </div>
-      <Button
-        variant="secondary"
-        size="sm"
-        disabled={retrying}
-        onClick={async () => {
-          setRetrying(true);
-          await checkLibrary();
-          setRetrying(false);
-        }}
-      >
-        Check again
-      </Button>
+      {signing && (
+        <LinkForm
+          busy={retrying}
+          note="Library's address and public key are in Library's .env.local (VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY). The sign-in is your Library account. Kept on this device only, never in LifeOS's data or backups."
+          fields={[
+            { name: "url", label: "Library address (Supabase URL)", placeholder: "https://….supabase.co", initial: saved?.url },
+            { name: "anonKey", label: "Public key", initial: saved?.anonKey },
+            { name: "email", label: "Email", initial: saved?.email },
+            { name: "password", label: "Password", type: "password", initial: saved?.password },
+            { name: "person", label: "Whose reading to follow", initial: saved?.person ?? "chikaze" },
+          ]}
+          onSave={async (v) => {
+            let url: string;
+            try {
+              const u = new URL(v.url);
+              if (u.protocol !== "https:") throw new Error();
+              url = u.origin;
+            } catch {
+              toast.error("The Library address must be a valid https address.");
+              return;
+            }
+            saveLibraryLink({ url, anonKey: v.anonKey, email: v.email, password: v.password, person: v.person.toLowerCase() });
+            setRetrying(true);
+            const r = await checkLibrary();
+            setRetrying(false);
+            if (r.available) setSigning(false);
+          }}
+          onForget={
+            saved
+              ? () => {
+                  saveLibraryLink(null);
+                  setSigning(false);
+                  void checkLibrary();
+                }
+              : undefined
+          }
+        />
+      )}
     </div>
   );
 }

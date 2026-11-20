@@ -5,10 +5,12 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useDerived } from "@/components/shell/providers";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { LinkForm } from "@/components/link-form";
 import { Button } from "@/components/ui/button";
 import { checkAnki, syncAnki } from "@/lib/anki-sync";
 import { formatDayStart, importAnki, suggestMapping, type AnkiFeed } from "@/lib/engine/anki";
 import { fmtFull } from "@/lib/engine/dates";
+import { getAnkiLink, saveAnkiLink } from "@/lib/links";
 import { useStore } from "@/lib/store";
 import { useUI } from "@/lib/ui";
 import { fmtHours, plural } from "@/lib/utils";
@@ -191,6 +193,7 @@ export function AnkiPanel() {
   const mode = useStore((s) => s.mode);
   const check = useUI((s) => s.ankiCheck);
   const [retrying, setRetrying] = useState(false);
+  const [signing, setSigning] = useState(false);
 
   useEffect(() => {
     if (mode === "real") void checkAnki();
@@ -206,24 +209,60 @@ export function AnkiPanel() {
   }
   if (linked) return <Connected feed={check?.available ? check.feed : null} />;
   if (check?.available) return <Connect key={check.feed.generatedAt} feed={check.feed} />;
+  const saved = getAnkiLink();
   return (
-    <div className="flex min-h-14 flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
-      <div className="min-w-0">
-        <p className="text-sm">Anki</p>
-        <p className="text-xs text-muted-foreground">{check ? check.reason : "Looking for Anki Analytics…"}</p>
+    <div>
+      <div className="flex min-h-14 flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
+        <div className="min-w-0">
+          <p className="text-sm">Anki</p>
+          <p className="text-xs text-muted-foreground">{check ? check.reason : "Looking for Anki Analytics…"}</p>
+        </div>
+        <div className="flex gap-1.5">
+          <Button variant="secondary" size="sm" aria-expanded={signing} onClick={() => setSigning((v) => !v)}>
+            {saved ? "Sign-in" : "Connect"}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={retrying}
+            onClick={async () => {
+              setRetrying(true);
+              await checkAnki();
+              setRetrying(false);
+            }}
+          >
+            Check again
+          </Button>
+        </div>
       </div>
-      <Button
-        variant="secondary"
-        size="sm"
-        disabled={retrying}
-        onClick={async () => {
-          setRetrying(true);
-          await checkAnki();
-          setRetrying(false);
-        }}
-      >
-        Check again
-      </Button>
+      {signing && (
+        <LinkForm
+          busy={retrying}
+          note="From Anki Analytics' Firebase setup (data/cloud.json in its folder, and the password you gave `npm run cloud -- login`). Kept on this device only, never in LifeOS's data or backups."
+          fields={[
+            { name: "projectId", label: "Firebase project id", initial: saved?.projectId },
+            { name: "apiKey", label: "Web API key", initial: saved?.apiKey },
+            { name: "email", label: "Email", initial: saved?.email },
+            { name: "password", label: "Password", type: "password", initial: saved?.password },
+          ]}
+          onSave={async (v) => {
+            saveAnkiLink({ projectId: v.projectId, apiKey: v.apiKey, email: v.email, password: v.password });
+            setRetrying(true);
+            const r = await checkAnki();
+            setRetrying(false);
+            if (r.available) setSigning(false);
+          }}
+          onForget={
+            saved
+              ? () => {
+                  saveAnkiLink(null);
+                  setSigning(false);
+                  void checkAnki();
+                }
+              : undefined
+          }
+        />
+      )}
     </div>
   );
 }

@@ -2,22 +2,45 @@
 
 import { useEffect } from "react";
 import type { LibraryCheck } from "./engine/library";
+import { fetchLibrary, LibraryError } from "./library-fetch";
+import { getLibraryLink } from "./links";
 import { useStore } from "./store";
 import { useUI } from "./ui";
 
-const offline: LibraryCheck = { available: false, reason: "Library could not be reached from this computer." };
+const hosted = !!process.env.NEXT_PUBLIC_STATIC;
+const offline: LibraryCheck = {
+  available: false,
+  reason: hosted ? "Connect Library below to bring in your reading." : "Library could not be reached from this computer.",
+};
+
+/** Reads Library straight from the browser with the sign-in saved on this device. */
+const checkDirect = async (): Promise<LibraryCheck | null> => {
+  const link = getLibraryLink();
+  if (!link) return null;
+  try {
+    return { available: true, feed: await fetchLibrary(link) };
+  } catch (e) {
+    return { available: false, reason: e instanceof LibraryError ? e.message : "Library could not be reached. Check the internet connection." };
+  }
+};
 
 /** Asks the LifeOS server to read Library. The result is shared with Settings. */
 export const checkLibrary = async (): Promise<LibraryCheck> => {
-  try {
-    const res = await fetch("/api/library");
-    const result = res.ok ? ((await res.json()) as LibraryCheck) : offline;
-    useUI.getState().setLibraryCheck(result);
-    return result;
-  } catch {
-    useUI.getState().setLibraryCheck(offline);
-    return offline;
+  let result: LibraryCheck = offline;
+  if (!hosted) {
+    try {
+      const res = await fetch("/api/library");
+      if (res.ok) result = (await res.json()) as LibraryCheck;
+    } catch {
+      /* the direct read below is the fallback */
+    }
   }
+  if (!result.available) {
+    const direct = await checkDirect();
+    if (direct && (direct.available || result === offline)) result = direct;
+  }
+  useUI.getState().setLibraryCheck(result);
+  return result;
 };
 
 export const syncLibrary = async () => {
