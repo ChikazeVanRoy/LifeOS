@@ -26,6 +26,11 @@ const manual = (date: string, goalId = "rd"): LogEntry => ({
   id: `m-${date}`, goalId, typeId: null, date, time: null, tz: "UTC", minutes: 30, metrics: {}, createdAt: 1, updatedAt: 1,
 });
 
+const libraryEntry = (date: string, pages: number): LogEntry => ({
+  id: libraryReadId("a", date), goalId: "rd", typeId: null, date, time: null, tz: "UTC", minutes: Math.round(pages * 1.5), metrics: { pages },
+  note: "Book a", source: "library", createdAt: 1, updatedAt: 1,
+});
+
 describe("reading Library's answer", () => {
   it("keeps only the fields it needs", () => {
     const raw = { generatedAt: "x", books: [{ ...book({ id: "a" }), rating: 5, review: "secret thoughts", price: "12" }] };
@@ -147,6 +152,39 @@ describe("books being read", () => {
     const one = run(feedOf(at(150)), [], { a: 120 });
     const next = run(feedOf(at(160)), one.logs, one.seen, false, "2026-03-11");
     expect(next.logs.map((l) => l.date).sort()).toEqual(["2026-03-10", "2026-03-11"]);
+  });
+
+  it("puts pages on the day the reading log says they were read, not the day they were seen", () => {
+    // Seen at 120 on the 9th; read to 140 late that night, then to 160 on the 10th, synced on the 10th.
+    const moves = [
+      { from: 100, to: 120, at: "2026-03-09T10:00:00Z" },
+      { from: 120, to: 140, at: "2026-03-09T23:40:00Z" },
+      { from: 140, to: 160, at: "2026-03-10T08:00:00Z" },
+    ];
+    const yesterday = { ...libraryEntry("2026-03-09", 20) };
+    const r = run(feedOf(at(160, { moves })), [yesterday], { a: 120 });
+    const byDate = Object.fromEntries(r.logs.map((l) => [l.date, l.metrics.pages]));
+    expect(byDate).toEqual({ "2026-03-09": 40, "2026-03-10": 20 });
+    expect(r.seen).toEqual({ a: 160 });
+    // Seen again with nothing new: nothing moves.
+    expect(run(feedOf(at(160, { moves })), r.logs, r.seen).logs).toEqual(r.logs);
+  });
+
+  it("uses the time zone for the day, and counts a typo put right once", () => {
+    const moves = [
+      { from: 120, to: 900, at: "2026-03-10T03:00:00Z" },
+      { from: 900, to: 130, at: "2026-03-10T03:01:00Z" },
+      { from: 130, to: 150, at: "2026-03-10T09:00:00Z" },
+    ];
+    const r = importLibrary({ feed: feedOf(at(150, { moves })), goalId: "rd", seen: { a: 120 }, goals, logs: [], today, tz: "America/New_York", now: 1000 });
+    // 03:00Z is still the 9th in New York; the typo reaches no further than the page now.
+    expect(Object.fromEntries(r.logs.map((l) => [l.date, l.metrics.pages]))).toEqual({ "2026-03-09": 30 });
+  });
+
+  it("puts what the log doesn't cover on today", () => {
+    const moves = [{ from: 120, to: 130, at: "2026-03-08T12:00:00Z" }];
+    const r = run(feedOf(at(150, { moves })), [], { a: 120 });
+    expect(Object.fromEntries(r.logs.map((l) => [l.date, l.metrics.pages]))).toEqual({ "2026-03-08": 10, [today]: 20 });
   });
 
   it("ignores a page that went backwards, and keeps following from there", () => {
@@ -281,6 +319,29 @@ describe("talking to Supabase", () => {
     expect(feed.books[0]).toMatchObject({ pages: null, progress: null, status: "Reading" });
   });
 
+  it("reads this person's reading log for the days pages were read, and does without it", async () => {
+    const calls = stub((url) => {
+      if (url.includes("/auth/v1/token")) return json({ access_token: "tok" });
+      if (url.includes("/reading_log?")) return json([{ book_id: "1", from_page: 10, to_page: 30, at: "2026-03-09T23:30:00+00:00" }]);
+      if (url.includes("/readings?")) return json([{ book_id: "1", status: "Reading", finish_date: "", progress: 30 }]);
+      return json([{ id: "1", title: "One", pages: "100" }]);
+    });
+    const feed = await fetchLibrary({ ...config, email: "a5@example.com" });
+    expect(feed.books[0].moves).toEqual([{ from: 10, to: 30, at: "2026-03-09T23:30:00+00:00" }]);
+    expect(calls.find((c) => c.url.includes("/reading_log?"))!.url).toContain("person=eq.chikaze");
+    expect(parseLibraryFeed(feed)).not.toBeNull();
+
+    stub((url) => {
+      if (url.includes("/auth/v1/token")) return json({ access_token: "tok" });
+      if (url.includes("/reading_log?")) return json({ message: "relation does not exist" }, 404);
+      if (url.includes("/readings?")) return json([{ book_id: "1", status: "Reading", finish_date: "", progress: 30 }]);
+      return json([{ id: "1", title: "One", pages: "100" }]);
+    });
+    const without = await fetchLibrary({ ...config, email: "a6@example.com" });
+    expect(without.books[0]).toMatchObject({ progress: 30 });
+    expect(without.books[0].moves).toBeUndefined();
+  });
+
   it("explains a refused sign-in without exposing the password", async () => {
     stub(() => json({ error: "invalid_grant" }, 400));
     const error = await fetchLibrary({ ...config, email: "a3@example.com", password: "hunter2" }).catch((e: unknown) => e);
@@ -294,7 +355,7 @@ describe("talking to Supabase", () => {
     let books = 0;
     stub((url) => {
       if (url.includes("/auth/v1/token")) return json({ access_token: "tok" });
-      if (url.includes("/readings?")) return json([]);
+      if (url.includes("/readings?") || url.includes("/reading_log?")) return json([]);
       return json(books++ === 0 ? many : [{ id: "last", title: "T" }]);
     });
     await fetchLibrary({ ...config, email: "a4@example.com" });

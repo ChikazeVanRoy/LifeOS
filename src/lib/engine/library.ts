@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { Goal, ISODate, LogEntry } from "../types";
-import { isValidDate } from "./dates";
+import { isValidDate, todayIn } from "./dates";
 
 const book = z.object({
   id: z.string().min(1),
@@ -12,6 +12,8 @@ const book = z.object({
   finishDate: z.string(),
   /** The page reached, for a book being read. */
   progress: z.number().int().min(0).nullable(),
+  /** Recent page changes from Library's reading log, oldest first, so pages land on the day they were read. */
+  moves: z.array(z.object({ from: z.number().int().nullable(), to: z.number().int(), at: z.string() })).optional(),
 });
 
 /**
@@ -80,6 +82,37 @@ export interface LibraryImportResult {
   since: ISODate | null;
   changedDates: ISODate[];
 }
+
+type Move = NonNullable<LibraryBook["moves"]>[number];
+
+/**
+ * Splits the pages from `prev` to `progress` across the days they were read, from the reading log.
+ * The walk starts after the page was last at `prev` (where LifeOS saw it), counts only pages beyond
+ * the furthest reached, so a typo put right is not counted twice, and puts what the log doesn't
+ * cover on `today`. A day later than `today` (a clock ahead) is today.
+ */
+export const pagesByDay = (moves: Move[], prev: number, progress: number, today: ISODate, tz: string): Map<ISODate, number> => {
+  const out = new Map<ISODate, number>();
+  const add = (date: ISODate, n: number) => n > 0 && out.set(date, (out.get(date) ?? 0) + n);
+  let start = 0;
+  for (let i = moves.length - 1; i >= 0; i--) {
+    if (moves[i].to <= prev) {
+      start = i + 1;
+      break;
+    }
+  }
+  let reached = prev;
+  for (const m of moves.slice(start)) {
+    const t = new Date(m.at);
+    if (Number.isNaN(t.getTime())) continue;
+    const next = Math.min(Math.max(reached, m.to), progress);
+    const day = todayIn(tz, t);
+    add(day > today ? today : day, next - reached);
+    reached = next;
+  }
+  add(today, progress - reached);
+  return out;
+};
 
 interface ImportInput {
   feed: LibraryFeed;
@@ -182,18 +215,20 @@ export const importLibrary = ({ feed: data, goalId, seen, goals, logs, today, tz
       }
       nextSeen[b.id] = b.progress;
       if (baseline || prev === undefined || b.progress <= prev) continue;
-      const id = libraryReadId(b.id, today);
-      if (handled(id, today)) continue;
-      const saved = existing.get(id);
-      const pages = (saved?.metrics.pages ?? 0) + (b.progress - prev);
-      if (saved) {
-        replaced.set(id, { ...saved, minutes: minutesFor(pages), metrics: { ...saved.metrics, pages }, updatedAt: now });
-        result.updated++;
-      } else {
-        fresh.push(entry(id, today, pages, b.title));
-        result.added++;
+      for (const [date, read] of pagesByDay(b.moves ?? [], prev, b.progress, today, tz)) {
+        const id = libraryReadId(b.id, date);
+        if (handled(id, date)) continue;
+        const saved = replaced.get(id) ?? existing.get(id);
+        const pages = (saved?.metrics.pages ?? 0) + read;
+        if (saved) {
+          replaced.set(id, { ...saved, minutes: minutesFor(pages), metrics: { ...saved.metrics, pages }, updatedAt: now });
+          result.updated++;
+        } else {
+          fresh.push(entry(id, date, pages, b.title));
+          result.added++;
+        }
+        result.changedDates.push(date);
       }
-      result.changedDates.push(today);
     }
   }
 
