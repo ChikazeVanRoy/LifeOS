@@ -390,7 +390,8 @@ export const useStore = create<State>()((set, get) => {
         ...x,
         logs: result.logs,
         goals: result.goals,
-        library: { goalId, connectedAt: new Date().toISOString(), seen: result.seen },
+        // A new link has no earlier pages to put right.
+        library: { goalId, connectedAt: new Date().toISOString(), seen: result.seen, daysRepaired: true },
       }));
       return result;
     },
@@ -399,12 +400,21 @@ export const useStore = create<State>()((set, get) => {
       if (!d.library || get().mode !== "real") return;
       const tz = tzNow(d.settings);
       const today = todayIn(tz);
-      const result = importLibrary({ feed, goalId: d.library.goalId, seen: d.library.seen, goals: d.goals, logs: d.logs, today, tz, now: Date.now() });
+      const repair = !d.library.daysRepaired;
+      const result = importLibrary({ feed, goalId: d.library.goalId, seen: d.library.seen, goals: d.goals, logs: d.logs, today, tz, now: Date.now(), repair });
       const changed = result.added + result.updated + result.removed > 0;
       const moved = JSON.stringify(result.seen) !== JSON.stringify(d.library.seen);
-      if (!changed && !moved) return;
+      if (!changed && !moved && !result.repaired) return;
       const recent = result.changedDates.some((date) => date >= addDays(today, -6));
-      update((x) => ({ ...x, logs: result.logs, goals: result.goals, library: x.library && { ...x.library, seen: result.seen } }), recent);
+      update(
+        (x) => ({
+          ...x,
+          logs: result.logs,
+          goals: result.goals,
+          library: x.library && { ...x.library, seen: result.seen, ...(result.repaired ? { daysRepaired: true } : {}) },
+        }),
+        recent,
+      );
     },
     disconnectLibrary: (keepHistory) =>
       update((d) => ({

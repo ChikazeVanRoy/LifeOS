@@ -81,6 +81,8 @@ export interface LibraryImportResult {
   /** The earliest day imported. */
   since: ISODate | null;
   changedDates: ISODate[];
+  /** The one-time repair of earlier days ran: the reading log was there to do it with. */
+  repaired: boolean;
 }
 
 type Move = NonNullable<LibraryBook["moves"]>[number];
@@ -92,8 +94,6 @@ type Move = NonNullable<LibraryBook["moves"]>[number];
  * cover on `today`. A day later than `today` (a clock ahead) is today.
  */
 export const pagesByDay = (moves: Move[], prev: number, progress: number, today: ISODate, tz: string): Map<ISODate, number> => {
-  const out = new Map<ISODate, number>();
-  const add = (date: ISODate, n: number) => n > 0 && out.set(date, (out.get(date) ?? 0) + n);
   let start = 0;
   for (let i = moves.length - 1; i >= 0; i--) {
     if (moves[i].to <= prev) {
@@ -101,17 +101,49 @@ export const pagesByDay = (moves: Move[], prev: number, progress: number, today:
       break;
     }
   }
-  let reached = prev;
-  for (const m of moves.slice(start)) {
+  const { days, reached } = walk(moves.slice(start), prev, progress, today, tz);
+  if (progress > reached) days.set(today, (days.get(today) ?? 0) + progress - reached);
+  return days;
+};
+
+/** Pages beyond the furthest reached, from `from` up to `cap`, on the day of each move. */
+const walk = (moves: Move[], from: number, cap: number, today: ISODate, tz: string) => {
+  const days = new Map<ISODate, number>();
+  let reached = from;
+  for (const m of moves) {
     const t = new Date(m.at);
     if (Number.isNaN(t.getTime())) continue;
-    const next = Math.min(Math.max(reached, m.to), progress);
+    const next = Math.min(Math.max(reached, m.to), cap);
     const day = todayIn(tz, t);
-    add(day > today ? today : day, next - reached);
+    const date = day > today ? today : day;
+    if (next > reached) days.set(date, (days.get(date) ?? 0) + next - reached);
     reached = next;
   }
-  add(today, progress - reached);
-  return out;
+  return { days, reached };
+};
+
+/**
+ * Where pages already logged for a book should have gone, from the reading log: its days from the first
+ * day the log has, holding the same pages in all (so none count twice or go missing), each day as the
+ * log has it, in order. Pages the log can't place stay on the earliest of those days.
+ */
+export const repairDays = (moves: Move[], seenPage: number, logged: Map<ISODate, number>, today: ISODate, tz: string, skip: Set<ISODate>) => {
+  const first = moves.find((m) => !Number.isNaN(new Date(m.at).getTime()));
+  if (!first) return null;
+  const since = todayIn(tz, new Date(first.at));
+  const mine = [...logged].filter(([d]) => d >= since).sort(([a], [b]) => a.localeCompare(b));
+  let left = mine.reduce((n, [, p]) => n + p, 0);
+  if (!left) return null;
+  const { days } = walk(moves, first.from ?? first.to, seenPage, today, tz);
+  const out = new Map<ISODate, number>();
+  for (const [d, p] of [...days].sort(([a], [b]) => a.localeCompare(b))) {
+    if (skip.has(d) || !left) continue;
+    const n = Math.min(p, left);
+    out.set(d, n);
+    left -= n;
+  }
+  if (left) out.set(mine[0][0], (out.get(mine[0][0]) ?? 0) + left);
+  return { since, days: out };
 };
 
 interface ImportInput {
@@ -125,6 +157,8 @@ interface ImportInput {
   now: number;
   /** First import: books being read are noted at their current page, not logged. */
   baseline?: boolean;
+  /** Move pages already logged for books being read to the days the reading log says they were read. */
+  repair?: boolean;
 }
 
 /**
@@ -134,9 +168,9 @@ interface ImportInput {
  * - reading logged by hand wins for that day, so hours never count twice
  * - pages already logged while reading are not counted again when the book is finished
  */
-export const importLibrary = ({ feed: data, goalId, seen, goals, logs, today, tz, now, baseline = false }: ImportInput): LibraryImportResult => {
+export const importLibrary = ({ feed: data, goalId, seen, goals, logs, today, tz, now, baseline = false, repair = false }: ImportInput): LibraryImportResult => {
   const base = goals.find((g) => g.id === goalId);
-  const empty = { added: 0, updated: 0, removed: 0, skippedDays: 0, undated: 0, books: 0, pages: 0, minutes: 0, since: null, changedDates: [] };
+  const empty = { added: 0, updated: 0, removed: 0, skippedDays: 0, undated: 0, books: 0, pages: 0, minutes: 0, since: null, changedDates: [], repaired: false };
   if (!base) return { ...empty, logs, goals, seen };
 
   const goal = readyForLibrary(base);
@@ -157,7 +191,7 @@ export const importLibrary = ({ feed: data, goalId, seen, goals, logs, today, tz
   const handled = (id: string, date: ISODate) => {
     if (!byHand.has(date)) return false;
     skipped.add(date);
-    if (existing.has(id)) {
+    if (existing.has(id) && current(id)) {
       replaced.set(id, null);
       result.removed++;
     }
@@ -178,6 +212,45 @@ export const importLibrary = ({ feed: data, goalId, seen, goals, logs, today, tz
     createdAt: now,
     updatedAt: now,
   });
+
+  /** The entry as this run has it so far: changed, new, or as it was. */
+  const current = (id: string) => (replaced.has(id) ? replaced.get(id) ?? undefined : fresh.find((l) => l.id === id) ?? existing.get(id));
+
+  /** Sets a day's pages for a book being read: adds, changes or removes its entry. */
+  const setDay = (b: LibraryBook, date: ISODate, pages: number) => {
+    const id = libraryReadId(b.id, date);
+    const saved = current(id);
+    if ((saved?.metrics.pages ?? 0) === pages) return;
+    const added = fresh.findIndex((l) => l.id === id);
+    if (added >= 0) {
+      // Made earlier in this run: changed in place, as it is not in the log yet.
+      if (pages) fresh[added] = { ...fresh[added], minutes: minutesFor(pages), metrics: { pages } };
+      else fresh.splice(added, 1);
+    } else if (!pages) {
+      replaced.set(id, null);
+      result.removed++;
+    } else if (saved) {
+      replaced.set(id, { ...saved, minutes: minutesFor(pages), metrics: { ...saved.metrics, pages }, updatedAt: now });
+      result.updated++;
+    } else {
+      fresh.push(entry(id, date, pages, b.title));
+      result.added++;
+    }
+    result.changedDates.push(date);
+  };
+
+  if (repair && !baseline) {
+    for (const b of data.books) {
+      const page = seen[b.id];
+      if (b.status !== "Reading" || !b.moves?.length || page === undefined) continue;
+      result.repaired = true;
+      const logged = new Map<ISODate, number>();
+      for (const l of existing.values()) if (l.id === libraryReadId(b.id, l.date)) logged.set(l.date, l.metrics.pages ?? 0);
+      const fixed = repairDays(b.moves, page, logged, today, tz, byHand);
+      if (!fixed) continue;
+      for (const date of new Set([...logged.keys(), ...fixed.days.keys()])) if (date >= fixed.since) setDay(b, date, fixed.days.get(date) ?? 0);
+    }
+  }
 
   for (const b of data.books) {
     if (b.status === "Read") {
@@ -218,16 +291,7 @@ export const importLibrary = ({ feed: data, goalId, seen, goals, logs, today, tz
       for (const [date, read] of pagesByDay(b.moves ?? [], prev, b.progress, today, tz)) {
         const id = libraryReadId(b.id, date);
         if (handled(id, date)) continue;
-        const saved = replaced.get(id) ?? existing.get(id);
-        const pages = (saved?.metrics.pages ?? 0) + read;
-        if (saved) {
-          replaced.set(id, { ...saved, minutes: minutesFor(pages), metrics: { ...saved.metrics, pages }, updatedAt: now });
-          result.updated++;
-        } else {
-          fresh.push(entry(id, date, pages, b.title));
-          result.added++;
-        }
-        result.changedDates.push(date);
+        setDay(b, date, (current(id)?.metrics.pages ?? 0) + read);
       }
     }
   }

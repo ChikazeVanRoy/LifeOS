@@ -192,6 +192,8 @@ export interface LibraryLink {
   connectedAt: string;
   /** The page last seen for each book being read, so only new pages are logged. */
   seen: Record<string, number>;
+  /** Pages logged before LifeOS read Library's reading log have been moved to the days they were read. */
+  daysRepaired?: boolean;
 }
 
 export type ThemePref = "system" | "light" | "dark";

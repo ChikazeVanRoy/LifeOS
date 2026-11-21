@@ -187,6 +187,44 @@ describe("books being read", () => {
     expect(Object.fromEntries(r.logs.map((l) => [l.date, l.metrics.pages]))).toEqual({ "2026-03-08": 10, [today]: 20 });
   });
 
+  describe("putting earlier days right, once", () => {
+    // Read 100→140 late on the 8th and 140→160 on the 9th, but synced each next morning.
+    const moves = [
+      { from: 100, to: 140, at: "2026-03-08T23:30:00Z" },
+      { from: 140, to: 160, at: "2026-03-09T20:00:00Z" },
+    ];
+    const wrong = [libraryEntry("2026-03-09", 40), libraryEntry("2026-03-10", 20)];
+    const repair = (logs: LogEntry[], progress = 160, list = moves) =>
+      importLibrary({ feed: feedOf(at(progress, { moves: list })), goalId: "rd", seen: { a: 160 }, goals, logs, today, tz: "UTC", now: 1000, repair: true });
+    const byDate = (logs: LogEntry[]) => Object.fromEntries(logs.filter((l) => l.source).map((l) => [l.date, l.metrics.pages]));
+
+    it("moves pages to the days they were read, keeping the total", () => {
+      const r = repair(wrong);
+      expect(r.repaired).toBe(true);
+      expect(byDate(r.logs)).toEqual({ "2026-03-08": 40, "2026-03-09": 20 });
+      expect(r.pages).toBe(60);
+      expect(repair(r.logs).logs).toEqual(r.logs);
+    });
+
+    it("adds today's new pages after putting the days right", () => {
+      const r = repair(wrong, 170, [...moves, { from: 160, to: 170, at: "2026-03-10T08:00:00Z" }]);
+      expect(byDate(r.logs)).toEqual({ "2026-03-08": 40, "2026-03-09": 20, [today]: 10 });
+    });
+
+    it("leaves days before the log, and hand-logged days, alone, and never counts more than was logged", () => {
+      const older = libraryEntry("2026-03-01", 50);
+      const r = repair([older, ...wrong, manual("2026-03-08")]);
+      // The 8th was logged by hand, so its 40 pages stay with the earliest day Library had.
+      expect(byDate(r.logs)).toEqual({ "2026-03-01": 50, "2026-03-09": 60 });
+    });
+
+    it("waits for the reading log, and does nothing on a first import", () => {
+      expect(repair(wrong, 160, []).repaired).toBe(false);
+      const first = importLibrary({ feed: feedOf(at(160, { moves })), goalId: "rd", seen: {}, goals, logs: [], today, tz: "UTC", now: 1000, repair: true, baseline: true });
+      expect(first.repaired).toBe(false);
+    });
+  });
+
   it("ignores a page that went backwards, and keeps following from there", () => {
     const r = run(feedOf(at(100)), [], { a: 150 });
     expect(r.logs).toHaveLength(0);

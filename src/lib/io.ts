@@ -138,6 +138,7 @@ const appData = z.object({
       goalId: z.string(),
       connectedAt: z.string(),
       seen: z.record(z.string(), z.number().int().min(0)),
+      daysRepaired: z.boolean().optional(),
     })
     .nullable()
     .optional()
