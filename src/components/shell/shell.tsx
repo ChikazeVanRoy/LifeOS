@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, CalendarDays, Compass, Home, LayoutGrid, Mountain, NotebookPen, Plus, Settings, Trophy, X } from "lucide-react";
+import { BarChart3, CalendarDays, Compass, Home, LayoutGrid, MoreHorizontal, Mountain, NotebookPen, Plus, Settings, Trophy, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -9,6 +9,7 @@ import { Celebrations } from "@/components/log/celebrations";
 import { LogSheet } from "@/components/log/log-sheet";
 import { TimerPill } from "@/components/log/timer-pill";
 import { Onboarding } from "@/components/onboarding";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { FlameIcon, Ring } from "@/components/viz/primitives";
 import { useAnkiAutoSync } from "@/lib/anki-sync";
 import { useHealthAutoSync } from "@/lib/health-sync";
@@ -28,6 +29,17 @@ const NAV = [
   { href: "/achievements", label: "Achievements", short: "Awards", icon: Trophy },
   { href: "/settings", label: "Settings", short: "Settings", icon: Settings },
 ];
+
+/** What the phone's bottom bar has no room for, named rather than left as bare icons. */
+const MORE = [
+  { href: "/roadmaps", label: "Roadmaps", icon: Mountain },
+  { href: "/review", label: "Weekly review", icon: NotebookPen },
+  { href: "/achievements", label: "Achievements", icon: Trophy },
+  { href: "/settings", label: "Settings", icon: Settings },
+];
+
+export const STREAK_RULE =
+  "Days in a row you kept up with every goal. A goal needs you on its scheduled days, or on the last days of a week when its weekly target is still short. Each goal can miss one day per streak; a second miss ends it.";
 
 const active = (path: string, href: string) => (href === "/" ? path === "/" : path.startsWith(href));
 
@@ -83,10 +95,11 @@ function Sidebar() {
           <NotebookPen size={18} strokeWidth={1.8} /> Weekly review
         </Link>
       </nav>
-      <Link href="/achievements" title="Days in a row you kept up with every goal. A goal needs you on its scheduled days, or on the last days of a week when its weekly target is still short. Each goal can miss one day per streak; a second miss ends it." className="mt-auto flex items-center gap-3 rounded-2xl p-2 transition-colors hover:bg-secondary">
+      <Link href="/achievements" title={STREAK_RULE} className="mt-auto flex items-center gap-3 rounded-2xl p-2 transition-colors hover:bg-secondary">
         <span className="grid size-11 place-items-center"><FlameIcon size={30} lit={d.overallStreak.current > 0} /></span>
         <span className="min-w-0">
           <span className="num block truncate text-sm font-medium">{plural(d.overallStreak.current, "day")}</span>
+          <span className="sr-only">{STREAK_RULE}</span>
           <span className="block text-xs text-muted-foreground">Life streak{d.overallStreak.currentForgiven > 0 && ` · incl. ${plural(d.overallStreak.currentForgiven, "rest day")}`}</span>
         </span>
       </Link>
@@ -105,7 +118,7 @@ function BottomNav() {
       <div className="mx-auto grid h-[62px] max-w-md grid-cols-5 items-center">
         {items.map((n) =>
           n ? (
-            <Link key={n.href} href={n.href} aria-current={active(path, n.href) ? "page" : undefined} className={cn("flex h-full flex-col items-center justify-center gap-0.5 text-[10.5px]", active(path, n.href) ? "font-medium text-foreground" : "text-muted-foreground")}>
+            <Link key={n.href} href={n.href} aria-current={active(path, n.href) ? "page" : undefined} className={cn("flex h-full flex-col items-center justify-center gap-0.5 text-[11px]", active(path, n.href) ? "font-medium text-foreground" : "text-muted-foreground")}>
               <n.icon size={21} strokeWidth={active(path, n.href) ? 2.2 : 1.8} />
               {n.short}
             </Link>
@@ -129,12 +142,18 @@ function MobileTop() {
   return (
     <div className="-mx-4 mb-3 flex h-12 items-center justify-between bg-background px-4 md:hidden" style={{ paddingTop: "env(safe-area-inset-top)", boxSizing: "content-box" }}>
       <Link href="/"><Logo size={22} /></Link>
-      <div className="flex items-center gap-0.5 text-muted-foreground">
-        <Link href="/roadmaps" aria-label="Roadmaps" className="grid size-10 place-items-center"><Mountain size={20} strokeWidth={1.8} /></Link>
-        <Link href="/review" aria-label="Weekly review" className="grid size-10 place-items-center"><NotebookPen size={20} strokeWidth={1.8} /></Link>
-        <Link href="/achievements" aria-label="Achievements" className="grid size-10 place-items-center"><Trophy size={20} strokeWidth={1.8} /></Link>
-        <Link href="/settings" aria-label="Settings" className="grid size-10 place-items-center"><Settings size={20} strokeWidth={1.8} /></Link>
-      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger aria-label="More pages" className="inline-flex h-10 items-center gap-1.5 rounded-xl px-3 text-sm text-muted-foreground transition-colors hover:text-foreground">
+          <MoreHorizontal size={20} strokeWidth={1.8} /> More
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-48">
+          {MORE.map((n) => (
+            <DropdownMenuItem key={n.href} render={<Link href={n.href} />} className="h-11 gap-3 text-sm">
+              <n.icon size={18} strokeWidth={1.8} /> {n.label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }

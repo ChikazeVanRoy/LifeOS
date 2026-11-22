@@ -81,8 +81,12 @@ export interface LibraryImportResult {
   /** The earliest day imported. */
   since: ISODate | null;
   changedDates: ISODate[];
-  /** The one-time repair of earlier days ran: the reading log was there to do it with. */
+  /** The one-time repair of earlier days ran for a book: the reading log was there to do it with. */
   repaired: boolean;
+  /** The books the repair is finished for, now and before. */
+  repairedBooks: string[];
+  /** Every book being read has been repaired, so there is nothing left to wait for. */
+  repairDone: boolean;
 }
 
 type Move = NonNullable<LibraryBook["moves"]>[number];
@@ -142,7 +146,9 @@ export const repairDays = (moves: Move[], seenPage: number, logged: Map<ISODate,
     out.set(d, n);
     left -= n;
   }
-  if (left) out.set(mine[0][0], (out.get(mine[0][0]) ?? 0) + left);
+  // Pages the log can't place stay with the earliest day Library had, but never on a hand-logged day.
+  const home = mine.find(([d]) => !skip.has(d));
+  if (left && home) out.set(home[0], (out.get(home[0]) ?? 0) + left);
   return { since, days: out };
 };
 
@@ -159,6 +165,8 @@ interface ImportInput {
   baseline?: boolean;
   /** Move pages already logged for books being read to the days the reading log says they were read. */
   repair?: boolean;
+  /** Books the repair has already been done for. */
+  repairedBooks?: string[];
 }
 
 /**
@@ -168,9 +176,9 @@ interface ImportInput {
  * - reading logged by hand wins for that day, so hours never count twice
  * - pages already logged while reading are not counted again when the book is finished
  */
-export const importLibrary = ({ feed: data, goalId, seen, goals, logs, today, tz, now, baseline = false, repair = false }: ImportInput): LibraryImportResult => {
+export const importLibrary = ({ feed: data, goalId, seen, goals, logs, today, tz, now, baseline = false, repair = false, repairedBooks = [] }: ImportInput): LibraryImportResult => {
   const base = goals.find((g) => g.id === goalId);
-  const empty = { added: 0, updated: 0, removed: 0, skippedDays: 0, undated: 0, books: 0, pages: 0, minutes: 0, since: null, changedDates: [], repaired: false };
+  const empty = { added: 0, updated: 0, removed: 0, skippedDays: 0, undated: 0, books: 0, pages: 0, minutes: 0, since: null, changedDates: [], repaired: false, repairedBooks, repairDone: false };
   if (!base) return { ...empty, logs, goals, seen };
 
   const goal = readyForLibrary(base);
@@ -240,16 +248,22 @@ export const importLibrary = ({ feed: data, goalId, seen, goals, logs, today, tz
   };
 
   if (repair && !baseline) {
+    const done = new Set(repairedBooks);
     for (const b of data.books) {
       const page = seen[b.id];
-      if (b.status !== "Reading" || !b.moves?.length || page === undefined) continue;
+      if (b.status !== "Reading" || page === undefined || done.has(b.id)) continue;
+      // A book whose reading log hasn't arrived yet waits for a later run.
+      if (!b.moves?.length) continue;
       result.repaired = true;
+      done.add(b.id);
       const logged = new Map<ISODate, number>();
       for (const l of existing.values()) if (l.id === libraryReadId(b.id, l.date)) logged.set(l.date, l.metrics.pages ?? 0);
       const fixed = repairDays(b.moves, page, logged, today, tz, byHand);
       if (!fixed) continue;
       for (const date of new Set([...logged.keys(), ...fixed.days.keys()])) if (date >= fixed.since) setDay(b, date, fixed.days.get(date) ?? 0);
     }
+    result.repairedBooks = [...done];
+    result.repairDone = data.books.every((b) => b.status !== "Reading" || seen[b.id] === undefined || done.has(b.id));
   }
 
   for (const b of data.books) {

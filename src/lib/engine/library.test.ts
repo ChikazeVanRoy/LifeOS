@@ -218,6 +218,23 @@ describe("books being read", () => {
       expect(byDate(r.logs)).toEqual({ "2026-03-01": 50, "2026-03-09": 60 });
     });
 
+    it("never puts leftover pages on a hand-logged day", () => {
+      const early = libraryEntry("2026-03-08", 30);
+      const r = repair([early, libraryEntry("2026-03-09", 30), manual("2026-03-08")]);
+      expect(byDate(r.logs)["2026-03-08"]).toBeUndefined();
+      expect(Object.values(byDate(r.logs)).reduce((a, b) => a + b, 0)).toBe(60);
+    });
+
+    it("repairs each book once, and waits for one whose reading log hasn't come", () => {
+      const feed = feedOf(at(160, { moves }), { ...at(50, {}), id: "b", title: "B" });
+      const run = (repairedBooks: string[]) =>
+        importLibrary({ feed, goalId: "rd", seen: { a: 160, b: 50 }, goals, logs: wrong, today, tz: "UTC", now: 1000, repair: true, repairedBooks });
+      const first = run([]);
+      expect(first.repairedBooks).toEqual(["a"]);
+      expect(first.repairDone).toBe(false);
+      expect(run(["a"]).repaired).toBe(false);
+    });
+
     it("waits for the reading log, and does nothing on a first import", () => {
       expect(repair(wrong, 160, []).repaired).toBe(false);
       const first = importLibrary({ feed: feedOf(at(160, { moves })), goalId: "rd", seen: {}, goals, logs: [], today, tz: "UTC", now: 1000, repair: true, baseline: true });

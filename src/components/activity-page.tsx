@@ -32,8 +32,8 @@ function MonthCalendar({ month, setMonth, selected, onSelect, goalId }: { month:
       <div className="mb-3 flex items-center justify-between">
         <h2 className="font-display text-[19px] font-medium">{fmtMonthLong(month)}</h2>
         <div className="flex gap-1">
-          <button aria-label="Previous month" onClick={() => setMonth(addMonths(month, -1))} className="grid size-8 place-items-center rounded-lg bg-secondary"><ChevronLeft size={16} /></button>
-          <button aria-label="Next month" disabled={startOfMonth(d.today) <= month} onClick={() => setMonth(addMonths(month, 1))} className="grid size-8 place-items-center rounded-lg bg-secondary disabled:opacity-40"><ChevronRight size={16} /></button>
+          <button aria-label="Previous month" onClick={() => setMonth(addMonths(month, -1))} className="grid size-8 pointer-coarse:size-11 place-items-center rounded-lg bg-secondary"><ChevronLeft size={16} /></button>
+          <button aria-label="Next month" disabled={startOfMonth(d.today) <= month} onClick={() => setMonth(addMonths(month, 1))} className="grid size-8 pointer-coarse:size-11 place-items-center rounded-lg bg-secondary disabled:opacity-40"><ChevronRight size={16} /></button>
         </div>
       </div>
       <div className="grid grid-cols-7 gap-1 text-center">

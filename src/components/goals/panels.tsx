@@ -12,6 +12,7 @@ import { useStore } from "@/lib/store";
 import { APPLICATION_STAGES, type ApplicationStage, type Project, type ProjectKind } from "@/lib/types";
 import { useUI } from "@/lib/ui";
 import { cn, fmtNum } from "@/lib/utils";
+import { NativeSelect } from "@/components/ui/native-select";
 
 const projectCopy = (kind: ProjectKind, view: GoalView) => {
   if (kind === "book") return { heading: "Books", add: "Add a book", target: "Pages", metric: "pages", unit: "pages" };
@@ -105,7 +106,7 @@ export function ProficiencyPanel({ view }: { view: GoalView }) {
             <Input aria-label="Current level" placeholder="Now" value={p.current} onChange={(e) => updateGoal(view.goal.id, { proficiency: { ...p, current: e.target.value } })} className="h-9 w-36 rounded-xl" />
             <span className="text-muted-foreground">→</span>
             <Input aria-label="Target level" placeholder="Goal" value={p.target} onChange={(e) => updateGoal(view.goal.id, { proficiency: { ...p, target: e.target.value } })} className="h-9 w-28 rounded-xl" />
-            <button aria-label="Done" className="grid size-9 place-items-center rounded-xl bg-secondary"><Check size={16} /></button>
+            <button aria-label="Done" className="grid size-9 pointer-coarse:size-11 place-items-center rounded-xl bg-secondary"><Check size={16} /></button>
           </form>
         ) : (
           <p className="font-display mt-1 text-2xl font-medium">{p.current || "Where you are"} <span className="text-muted-foreground">→</span> {p.target || "Where you want to be"}</p>
@@ -166,9 +167,9 @@ export function LiftsPanel({ view }: { view: GoalView }) {
       title="Strength"
       subtitle={current ? `Best ${current.best.kg} ${d.weightUnit} × ${current.best.reps} · estimated 1RM ${current.best.e1rm.toFixed(1)} ${d.weightUnit}` : "Add exercises to a workout to chart them."}
       right={exercises.length > 0 && (
-        <select aria-label="Exercise" value={current?.name} onChange={(e) => setPick(e.target.value)} className="h-8 max-w-36 rounded-lg border bg-transparent px-2 text-xs">
+        <NativeSelect aria-label="Exercise" value={current?.name} onChange={(e) => setPick(e.target.value)} className="max-w-36">
           {exercises.map((e) => <option key={e.name}>{e.name}</option>)}
-        </select>
+        </NativeSelect>
       )}
     >
       {current ? (
@@ -199,9 +200,9 @@ export function ApplicationsPanel() {
               <p className="truncate text-sm">{a.role || "Role"} <span className="text-muted-foreground">at {a.company}</span></p>
               <p className="num text-xs text-muted-foreground">{fmtFull(a.appliedOn)}</p>
             </div>
-            <select aria-label={`Stage for ${a.company}`} value={a.stage} onChange={(e) => updateApplication(a.id, { stage: e.target.value as ApplicationStage })} className="h-8 rounded-lg border bg-transparent px-2 text-xs">
+            <NativeSelect aria-label={`Stage for ${a.company}`} value={a.stage} onChange={(e) => updateApplication(a.id, { stage: e.target.value as ApplicationStage })} >
               {APPLICATION_STAGES.map((s) => <option key={s} value={s}>{STAGE_LABEL[s]}</option>)}
-            </select>
+            </NativeSelect>
             <button aria-label={`Delete ${a.company}`} onClick={() => deleteApplication(a.id)} className="grid size-7 shrink-0 place-items-center text-muted-foreground opacity-0 group-hover:opacity-100 focus:opacity-100 max-md:opacity-40"><Trash2 size={14} /></button>
           </div>
         ))}

@@ -41,9 +41,9 @@ export function ReviewPage() {
       <motion.div variants={rise} className="flex items-center justify-between">
         <p className="eyebrow">{heading}</p>
         <div className="flex items-center gap-1">
-          <button aria-label="Previous week" disabled={atStart} onClick={() => setOffset((o) => o + 1)} className="grid size-8 place-items-center rounded-lg bg-secondary disabled:opacity-40"><ChevronLeft size={16} /></button>
+          <button aria-label="Previous week" disabled={atStart} onClick={() => setOffset((o) => o + 1)} className="grid size-8 pointer-coarse:size-11 place-items-center rounded-lg bg-secondary disabled:opacity-40"><ChevronLeft size={16} /></button>
           <span className="num w-32 text-center text-sm text-muted-foreground">{fmtRange(r.start, r.end)}</span>
-          <button aria-label="Next week" disabled={offset === 0} onClick={() => setOffset((o) => o - 1)} className="grid size-8 place-items-center rounded-lg bg-secondary disabled:opacity-40"><ChevronRight size={16} /></button>
+          <button aria-label="Next week" disabled={offset === 0} onClick={() => setOffset((o) => o - 1)} className="grid size-8 pointer-coarse:size-11 place-items-center rounded-lg bg-secondary disabled:opacity-40"><ChevronRight size={16} /></button>
         </div>
       </motion.div>
 

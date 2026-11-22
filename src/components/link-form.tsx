@@ -22,12 +22,15 @@ export function LinkForm({
   onSave,
   onForget,
   note,
+  error,
 }: {
   fields: LinkField[];
   busy: boolean;
   onSave: (values: Record<string, string>) => void;
   onForget?: () => void;
   note: string;
+  /** Why the last attempt failed, shown beside the form. */
+  error?: string;
 }) {
   const [values, setValues] = useState(() => Object.fromEntries(fields.map((f) => [f.name, f.initial ?? ""])));
   const ready = fields.every((f) => values[f.name].trim());
@@ -54,6 +57,7 @@ export function LinkForm({
         </label>
       ))}
       <p className="text-xs text-muted-foreground">{note}</p>
+      {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
       <div className="flex gap-1.5">
         <Button type="submit" size="sm" disabled={!ready || busy}>Save and check</Button>
         {onForget && <Button type="button" variant="ghost" size="sm" onClick={onForget}>Forget sign-in</Button>}

@@ -24,11 +24,11 @@ const Value = ({ label, value, secret }: { label: string; value: string; secret?
         <p className="truncate font-mono text-xs">{shown ? value : "••••••••••••••••"}</p>
       </div>
       {secret && (
-        <button aria-label={shown ? "Hide" : "Show"} onClick={() => setShown(!shown)} className="grid size-8 place-items-center rounded-lg bg-secondary text-muted-foreground">
+        <button aria-label={shown ? "Hide" : "Show"} onClick={() => setShown(!shown)} className="grid size-8 pointer-coarse:size-11 place-items-center rounded-lg bg-secondary text-muted-foreground">
           {shown ? <EyeOff size={14} /> : <Eye size={14} />}
         </button>
       )}
-      <button aria-label={`Copy ${label}`} onClick={() => copy(value, label)} className="grid size-8 place-items-center rounded-lg bg-secondary text-muted-foreground"><Copy size={14} /></button>
+      <button aria-label={`Copy ${label}`} onClick={() => copy(value, label)} className="grid size-8 pointer-coarse:size-11 place-items-center rounded-lg bg-secondary text-muted-foreground"><Copy size={14} /></button>
     </div>
   );
 };

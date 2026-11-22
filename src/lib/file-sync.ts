@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { toast } from "sonner";
 import { cloudEnabled, cloudRead, cloudUid, cloudWrite } from "./cloud";
 import { migrate } from "./migrate";
 import { planLoad } from "./reconcile";
@@ -139,6 +140,14 @@ export const reconcile = async (local: AppData | undefined, localHasData: boolea
   return { data: adoptFile(remote as Remote), notice: remote?.recovered ? "Your data file was damaged, so LifeOS restored the latest backup." : undefined };
 };
 
+/** Tells the person once that changes are waiting in this browser, rather than failing silently. */
+let warned = false;
+const failed = (reason?: string) => {
+  if (warned) return;
+  warned = true;
+  toast.error(reason ?? "Couldn't save to your account. Your changes are kept in this browser and will be sent when it works again.", { duration: 10_000 });
+};
+
 let saving = false;
 let waiting: AppData | null = null;
 
@@ -165,15 +174,19 @@ const drain = async () => {
       }
       if (sent.kind === "error") {
         console.error("LifeOS could not save:", sent.error);
+        failed(sent.error);
         status({ state: "browser" });
         return;
       }
+      warned = false;
       setRevision(sent.revision);
       status({ state: "saved", savedAt: sent.savedAt, backups: sent.backups });
       bridge?.announce();
     }
     setPending(false);
-  } catch {
+  } catch (error) {
+    console.error("LifeOS could not save:", error);
+    failed();
     status({ state: "browser" });
   } finally {
     saving = false;

@@ -25,6 +25,7 @@ import { useStore } from "@/lib/store";
 import { useUI } from "@/lib/ui";
 import type { AppData, Goal, ThemePref, WeightUnit } from "@/lib/types";
 import { cn, fmtNum, plural } from "@/lib/utils";
+import { NativeSelect } from "@/components/ui/native-select";
 
 const Group = ({ title, description, children }: { title: string; description?: string; children: ReactNode }) => (
   <section className="grid gap-3 md:grid-cols-[200px_minmax(0,1fr)] md:gap-8">
@@ -120,15 +121,15 @@ function RemindersRow() {
     <Row label="Reminders" hint={hint}>
       {state === "on" ? (
         <div className="flex items-center gap-2">
-          <select
+          <NativeSelect
             aria-label="Reminder time"
             value={hour}
             disabled={busy}
             onChange={(e) => { const h = Number(e.target.value); setHour(h); void run(() => changeHour(h)); }}
-            className="h-8 rounded-[10px] border bg-card px-2 text-[13px]"
+            
           >
             {Array.from({ length: 17 }, (_, i) => i + 6).map((h) => <option key={h} value={h}>{hourLabel(h)}</option>)}
-          </select>
+          </NativeSelect>
           <Button variant="secondary" size="sm" disabled={busy} onClick={() => run(async () => { await showTest(); })}>Test</Button>
           <Button variant="secondary" size="sm" disabled={busy} onClick={() => run(async () => { await disablePush(); return "off"; })}>Turn off</Button>
         </div>
@@ -183,7 +184,7 @@ function Rests() {
             <span className="num">{fmtFull(p.from)}{p.to !== p.from ? ` – ${fmtFull(p.to)}` : ""}</span>
             <span className="block text-xs text-muted-foreground">{p.goalId ? d.byId.get(p.goalId)?.goal.name : "All goals"}{p.note ? ` · ${p.note}` : ""}</span>
           </span>
-          <button aria-label="Delete rest period" onClick={() => deletePause(p.id)} className="grid size-8 place-items-center text-muted-foreground hover:text-foreground"><Trash2 size={14} /></button>
+          <button aria-label="Delete rest period" onClick={() => deletePause(p.id)} className="grid size-8 pointer-coarse:size-11 place-items-center text-muted-foreground hover:text-foreground"><Trash2 size={14} /></button>
         </div>
       ))}
       <form
@@ -200,10 +201,10 @@ function Rests() {
       >
         <Input type="date" aria-label="From" value={from} onChange={(e) => setFrom(e.target.value)} className="h-9 w-[150px] rounded-xl" />
         <Input type="date" aria-label="To" value={to} onChange={(e) => setTo(e.target.value)} className="h-9 w-[150px] rounded-xl" />
-        <select aria-label="Goal" value={goalId} onChange={(e) => setGoalId(e.target.value)} className="h-9 rounded-xl border bg-transparent px-2 text-sm">
+        <NativeSelect aria-label="Goal" value={goalId} onChange={(e) => setGoalId(e.target.value)} >
           <option value="">All goals</option>
           {d.goals.map((g) => <option key={g.goal.id} value={g.goal.id}>{g.goal.name}</option>)}
-        </select>
+        </NativeSelect>
         <Button type="submit" variant="secondary" size="sm"><Plus /> Add</Button>
       </form>
     </>
@@ -264,10 +265,10 @@ export function SettingsPage() {
             <Segmented<WeightUnit> label="Weight unit" value={settings.weightUnit} onChange={(weightUnit) => setSettings({ weightUnit })} options={[{ value: "kg", label: "kg" }, { value: "lb", label: "lb" }]} />
           </Row>
           <Row label="Timezone" hint={settings.timezone === "auto" ? `Following this device: ${deviceTimezone()}` : "Fixed. Entries keep the date they were logged on."}>
-            <select aria-label="Timezone" value={settings.timezone} onChange={(e) => setSettings({ timezone: e.target.value })} className="h-9 max-w-52 rounded-xl border bg-transparent px-2 text-sm">
+            <NativeSelect aria-label="Timezone" value={settings.timezone} onChange={(e) => setSettings({ timezone: e.target.value })} className="max-w-52">
               <option value="auto">Automatic</option>
               {zones.map((z) => <option key={z} value={z}>{z}</option>)}
-            </select>
+            </NativeSelect>
           </Row>
         </Group>
 
@@ -279,9 +280,9 @@ export function SettingsPage() {
                 <p className="truncate text-sm">{g.goal.name}{g.goal.archived && <span className="text-muted-foreground"> (archived)</span>}</p>
                 <p className="truncate text-xs text-muted-foreground">{describeSchedule(g.schedule)}</p>
               </div>
-              <button aria-label={`Move ${g.goal.name} up`} disabled={i === 0} onClick={() => reorderGoal(g.goal.id, -1)} className="grid size-8 place-items-center text-muted-foreground disabled:opacity-30"><ArrowUp size={15} /></button>
-              <button aria-label={`Move ${g.goal.name} down`} disabled={i === goals.length - 1} onClick={() => reorderGoal(g.goal.id, 1)} className="grid size-8 place-items-center text-muted-foreground disabled:opacity-30"><ArrowDown size={15} /></button>
-              <button aria-label={`Edit ${g.goal.name}`} onClick={() => setEditing({ goal: g.goal, isNew: false })} className="grid size-8 place-items-center rounded-lg bg-secondary text-muted-foreground"><Pencil size={14} /></button>
+              <button aria-label={`Move ${g.goal.name} up`} disabled={i === 0} onClick={() => reorderGoal(g.goal.id, -1)} className="grid size-8 pointer-coarse:size-11 place-items-center text-muted-foreground disabled:opacity-30"><ArrowUp size={15} /></button>
+              <button aria-label={`Move ${g.goal.name} down`} disabled={i === goals.length - 1} onClick={() => reorderGoal(g.goal.id, 1)} className="grid size-8 pointer-coarse:size-11 place-items-center text-muted-foreground disabled:opacity-30"><ArrowDown size={15} /></button>
+              <button aria-label={`Edit ${g.goal.name}`} onClick={() => setEditing({ goal: g.goal, isNew: false })} className="grid size-8 pointer-coarse:size-11 place-items-center rounded-lg bg-secondary text-muted-foreground"><Pencil size={14} /></button>
             </div>
           ))}
           <div className="py-3">
@@ -303,7 +304,7 @@ export function SettingsPage() {
           {!process.env.NEXT_PUBLIC_STATIC && <UpdateRow />}
         </Group>
 
-        <Group title="Your data" description="Saved automatically to a file on this Mac. The browser only keeps a working copy.">
+        <Group title="Your data" description={cloudEnabled ? "Saved automatically to your account. The browser keeps a working copy for when you are offline." : "Saved automatically to a file on this Mac. The browser only keeps a working copy."}>
           <DataFileRow />
           <Row label="Export" hint={`${plural(data.logs.length, "activity", "activities")} as JSON`}>
             <Button variant="secondary" size="sm" onClick={exportData}><Download /> Export</Button>
@@ -363,7 +364,7 @@ export function SettingsPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete everything?</AlertDialogTitle>
-            <AlertDialogDescription>All activity, goals and settings will be removed. A safety copy stays in your backups folder.</AlertDialogDescription>
+            <AlertDialogDescription>All activity, goals and settings will be removed. A safety copy stays in your backups.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Keep my data</AlertDialogCancel>

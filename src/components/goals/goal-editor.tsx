@@ -17,6 +17,7 @@ import { CREATIVE_FOCUSES, createGoal, creativeFocusPatch, nextColor, type Creat
 import { useStore } from "@/lib/store";
 import { COLOR_KEYS, type ColorKey, type Goal, type GoalKind, type Schedule } from "@/lib/types";
 import { cn, uid } from "@/lib/utils";
+import { NativeSelect } from "@/components/ui/native-select";
 
 const DAYS = [
   { n: 1, l: "M" }, { n: 2, l: "T" }, { n: 3, l: "W" }, { n: 4, l: "T" }, { n: 5, l: "F" }, { n: 6, l: "S" }, { n: 0, l: "S" },
@@ -45,7 +46,7 @@ export function ScheduleField({ value, onChange }: { value: Schedule; onChange: 
                   const days = on ? value.days.filter((x) => x !== d.n) : [...value.days, d.n];
                   if (days.length) onChange({ kind: "days", days });
                 }}
-                className={cn("grid size-9 place-items-center rounded-xl border text-sm", on ? "border-transparent bg-foreground font-medium text-background" : "text-muted-foreground")}
+                className={cn("grid size-9 pointer-coarse:size-11 place-items-center rounded-xl border text-sm", on ? "border-transparent bg-foreground font-medium text-background" : "text-muted-foreground")}
               >
                 {d.l}
               </button>
@@ -55,9 +56,9 @@ export function ScheduleField({ value, onChange }: { value: Schedule; onChange: 
       )}
       {value.kind === "weekly" && (
         <div className="flex items-center gap-2 text-sm">
-          <button type="button" aria-label="Fewer sessions" className="grid size-9 place-items-center rounded-xl border" onClick={() => onChange({ kind: "weekly", sessions: Math.max(1, value.sessions - 1) })}>−</button>
+          <button type="button" aria-label="Fewer sessions" className="grid size-9 pointer-coarse:size-11 place-items-center rounded-xl border" onClick={() => onChange({ kind: "weekly", sessions: Math.max(1, value.sessions - 1) })}>−</button>
           <span className="num w-20 text-center">{value.sessions} {value.sessions === 1 ? "session" : "sessions"}</span>
-          <button type="button" aria-label="More sessions" className="grid size-9 place-items-center rounded-xl border" onClick={() => onChange({ kind: "weekly", sessions: Math.min(21, value.sessions + 1) })}>+</button>
+          <button type="button" aria-label="More sessions" className="grid size-9 pointer-coarse:size-11 place-items-center rounded-xl border" onClick={() => onChange({ kind: "weekly", sessions: Math.min(21, value.sessions + 1) })}>+</button>
         </div>
       )}
     </div>
@@ -198,7 +199,7 @@ function Editor({ goal, open, onOpenChange, isNew, onCreated }: EditorProps & { 
             <Field label="Icon">
               <div className="flex flex-wrap gap-1.5" style={goalVar(draft.color)}>
                 {ICON_CHOICES.map((i) => (
-                  <button key={i} type="button" aria-label={i} aria-pressed={draft.icon === i} onClick={() => set({ icon: i })} className={cn("grid size-9 place-items-center rounded-xl", draft.icon === i ? "goal-tint text-[var(--goal)]" : "text-muted-foreground")}>
+                  <button key={i} type="button" aria-label={i} aria-pressed={draft.icon === i} onClick={() => set({ icon: i })} className={cn("grid size-9 pointer-coarse:size-11 place-items-center rounded-xl", draft.icon === i ? "goal-tint text-[var(--goal)]" : "text-muted-foreground")}>
                     <Icon name={i} size={17} />
                   </button>
                 ))}
@@ -289,10 +290,10 @@ function Editor({ goal, open, onOpenChange, isNew, onCreated }: EditorProps & { 
 
             {roadmaps.length > 0 && (
               <Field label="Long-term roadmap" hint="The big picture this goal works towards. Its steps can follow this goal's activity.">
-                <select aria-label="Long-term roadmap" value={draft.roadmapId ?? ""} onChange={(e) => set({ roadmapId: e.target.value || null })} className="h-10 w-full rounded-xl border bg-transparent px-3 text-sm">
+                <NativeSelect aria-label="Long-term roadmap" value={draft.roadmapId ?? ""} onChange={(e) => set({ roadmapId: e.target.value || null })} className="w-full">
                   <option value="">None</option>
                   {roadmaps.map((r) => <option key={r.id} value={r.id}>{r.title}</option>)}
-                </select>
+                </NativeSelect>
               </Field>
             )}
 

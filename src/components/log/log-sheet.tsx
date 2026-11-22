@@ -27,7 +27,7 @@ const DURATIONS = [10, 15, 20, 30, 45, 60, 90];
 
 export const chipClass = (on: boolean) =>
   cn(
-    "h-9 shrink-0 rounded-xl border px-3 text-sm whitespace-nowrap transition-colors",
+    "h-9 pointer-coarse:h-11 shrink-0 rounded-xl border px-3 text-sm whitespace-nowrap transition-colors",
     on ? "border-transparent bg-foreground font-medium text-background" : "bg-transparent text-muted-foreground hover:text-foreground",
   );
 
@@ -99,7 +99,7 @@ function ExerciseEditor({ exercises, onChange, history, unit }: { exercises: Exe
           <div key={i} className="rounded-2xl bg-secondary/60 p-2.5">
             <div className="flex items-center gap-2">
               <Input aria-label="Exercise" list="exercise-names" placeholder="Exercise" value={e.exercise} onChange={(x) => set(i, { exercise: x.target.value })} className="h-9 flex-1 bg-card" />
-              <button aria-label="Remove exercise" onClick={() => onChange(exercises.filter((_, j) => j !== i))} className="grid size-9 place-items-center text-muted-foreground hover:text-foreground"><X size={16} /></button>
+              <button aria-label="Remove exercise" onClick={() => onChange(exercises.filter((_, j) => j !== i))} className="grid size-9 pointer-coarse:size-11 place-items-center text-muted-foreground hover:text-foreground"><X size={16} /></button>
             </div>
             <div className="mt-2 grid grid-cols-3 gap-2">
               {(["sets", "reps", "kg"] as const).map((k) => (
@@ -129,7 +129,7 @@ function LogBody({ preset, onDone }: { preset: LogPreset | null; onDone: () => v
   const { form, setForm, pickMinutes } = useForm(preset);
   const ankiMapping = useStore((s) => s.data.anki?.mapping);
   const libraryGoalId = useStore((s) => s.data.library?.goalId);
-  const { addLog, updateLog, deleteLog, restoreLog, addMeasurement, updateProject, startTimer } = useStore.getState();
+  const { addLog, updateLog, deleteLog, restoreLog, addMeasurement, updateProject, startTimer, clearTimer } = useStore.getState();
   const [more, setMore] = useState(false);
   const [lifts, setLifts] = useState(false);
   const textRef = useRef<HTMLInputElement>(null);
@@ -196,7 +196,10 @@ function LogBody({ preset, onDone }: { preset: LogPreset | null; onDone: () => v
     }
     if (form.weighIn) {
       const value = Number(form.weight.replace(",", "."));
-      if (!value || !goal.measurement) return;
+      if (!value || !goal.measurement) {
+        toast.error("Enter a number for the weigh-in.");
+        return;
+      }
       addMeasurement({ goalId: goal.id, metricId: goal.measurement.id, date: form.date, value });
       toast.success(`${goal.measurement.label} saved: ${value} ${goal.measurement.unit}`);
       onDone();
@@ -218,6 +221,7 @@ function LogBody({ preset, onDone }: { preset: LogPreset | null; onDone: () => v
       toast.success("Activity updated");
     } else {
       const log = addLog(payload);
+      if (preset?.fromTimer) clearTimer();
       if (form.finish && form.projectId) updateProject(form.projectId, { finishedAt: form.date });
       toast.success("Logged", { action: { label: "Undo", onClick: () => deleteLog(log.id) } });
     }

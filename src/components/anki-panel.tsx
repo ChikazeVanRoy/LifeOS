@@ -14,6 +14,7 @@ import { ankiBuiltIn, getAnkiLink, saveAnkiLink } from "@/lib/links";
 import { useStore } from "@/lib/store";
 import { useUI } from "@/lib/ui";
 import { fmtHours, plural } from "@/lib/utils";
+import { NativeSelect } from "@/components/ui/native-select";
 
 function DeckMapper({ feed, mapping, onChange }: { feed: AnkiFeed; mapping: Record<string, string>; onChange: (m: Record<string, string>) => void }) {
   const d = useDerived();
@@ -39,7 +40,7 @@ function DeckMapper({ feed, mapping, onChange }: { feed: AnkiFeed; mapping: Reco
               <p className="truncate text-sm">{deck.name}</p>
               <p className="num text-xs text-muted-foreground">{fmtHours((t?.seconds ?? 0) / 60)} · {plural(t?.reviews ?? 0, "review")}</p>
             </div>
-            <select
+            <NativeSelect
               aria-label={`Goal for ${deck.name}`}
               value={mapping[deck.id] ?? ""}
               onChange={(e) => {
@@ -47,11 +48,11 @@ function DeckMapper({ feed, mapping, onChange }: { feed: AnkiFeed; mapping: Reco
                 delete next[deck.id];
                 onChange(e.target.value ? { ...next, [deck.id]: e.target.value } : next);
               }}
-              className="h-9 max-w-44 rounded-xl border bg-transparent px-2 text-sm"
+              className="max-w-44"
             >
               <option value="">Don&apos;t import</option>
               {d.goals.map((g) => <option key={g.goal.id} value={g.goal.id}>{g.goal.name}</option>)}
-            </select>
+            </NativeSelect>
           </div>
         );
       })}
@@ -104,9 +105,11 @@ function Connect({ feed }: { feed: AnkiFeed }) {
 function AnkiSignIn({ onDone }: { onDone: () => void }) {
   const saved = getAnkiLink();
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   return (
     <LinkForm
       busy={busy}
+      error={error}
       note={
         ankiBuiltIn
           ? "The account you sign in to Anki Analytics with on your phone. Kept on this device only, never in LifeOS's data or backups."
@@ -117,11 +120,16 @@ function AnkiSignIn({ onDone }: { onDone: () => void }) {
         { name: "password", label: "Password", type: "password", initial: saved?.password },
       ]}
       onSave={async (v) => {
+        setError("");
         saveAnkiLink({ email: v.email, password: v.password });
         setBusy(true);
         const r = await checkAnki();
         setBusy(false);
-        if (r.available) onDone();
+        if (r.available) return onDone();
+        // A sign-in that didn't work is not kept: the one that did stays.
+        saveAnkiLink(saved);
+        setError(r.reason);
+        void checkAnki();
       }}
       onForget={
         saved

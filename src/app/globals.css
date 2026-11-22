@@ -69,6 +69,8 @@
   --c-lime: #7fa32a;
 
   --aurora: linear-gradient(115deg, #7a5ae0 0%, #d3503f 58%, #e3a432 100%);
+  /* The same colours, deep enough for white text: at least 4.5:1 along its whole length. */
+  --aurora-strong: linear-gradient(115deg, #5d3fc4 0%, #b8392b 58%, #94590a 100%);
   --ember: linear-gradient(180deg, #f2b33d, #e0603f);
   --heat-empty: rgba(27, 25, 22, 0.055);
   color-scheme: light;
@@ -103,6 +105,7 @@
   --c-lime: #95b83c;
 
   --aurora: linear-gradient(115deg, #8e72ee 0%, #e0604a 58%, #e9a23b 100%);
+  --aurora-strong: linear-gradient(115deg, #5d3fc4 0%, #b8392b 58%, #94590a 100%);
   --heat-empty: rgba(255, 255, 255, 0.055);
   color-scheme: dark;
 }
@@ -156,7 +159,7 @@
     color: transparent;
   }
   .aurora-bg {
-    background: var(--aurora);
+    background: var(--aurora-strong);
     color: #fff;
   }
   /* Set --goal on an element, then tint with these. */

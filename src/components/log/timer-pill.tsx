@@ -44,21 +44,22 @@ export function TimerPill() {
         >
           <GoalBadge icon={view.goal.icon} color={view.goal.color} size={32} className="rounded-full" />
           <span className="num min-w-[58px] text-[15px] font-medium">{clock(timerElapsedMs(timer))}</span>
-          <button aria-label={timer.pausedAt ? "Resume timer" : "Pause timer"} onClick={timer.pausedAt ? resumeTimer : pauseTimer} className="grid size-9 place-items-center rounded-full bg-secondary transition-colors hover:brightness-95">
+          <button aria-label={timer.pausedAt ? "Resume timer" : "Pause timer"} onClick={timer.pausedAt ? resumeTimer : pauseTimer} className="grid size-9 pointer-coarse:size-11 place-items-center rounded-full bg-secondary transition-colors hover:brightness-95">
             {timer.pausedAt ? <Play size={15} /> : <Pause size={15} />}
           </button>
           <button
             aria-label="Stop timer and log"
             onClick={() => {
               const minutes = Math.max(1, Math.round(timerElapsedMs(timer) / 60000));
-              openLog({ goalId: timer.goalId, typeId: timer.typeId, minutes });
-              clearTimer();
+              // Paused, not cleared: the time is kept until it has been logged.
+              pauseTimer();
+              openLog({ goalId: timer.goalId, typeId: timer.typeId, minutes, fromTimer: true });
             }}
-            className="grid size-9 place-items-center rounded-full bg-primary text-primary-foreground"
+            className="grid size-9 pointer-coarse:size-11 place-items-center rounded-full bg-primary text-primary-foreground"
           >
             <Square size={13} fill="currentColor" />
           </button>
-          <button aria-label="Discard timer" onClick={clearTimer} className="grid size-7 place-items-center rounded-full text-muted-foreground hover:text-foreground">
+          <button aria-label="Discard timer" onClick={clearTimer} className="grid size-7 pointer-coarse:size-11 place-items-center rounded-full text-muted-foreground hover:text-foreground">
             <X size={14} />
           </button>
         </motion.div>

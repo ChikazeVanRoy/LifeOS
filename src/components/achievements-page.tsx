@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import { chipClass } from "@/components/log/log-sheet";
 import { useDerived } from "@/components/shell/providers";
 import { Icon } from "@/components/viz/icons";
+import { STREAK_RULE } from "@/components/shell/shell";
 import { AnimatedNumber, Bar, Empty, goalVar, GoalBadge, PageHeader, Ring, SectionTitle } from "@/components/viz/primitives";
 import { fmtFull, fmtRelative } from "@/lib/engine/dates";
 import type { AchievementState, Tier } from "@/lib/engine/achievements";
@@ -66,6 +67,7 @@ export function AchievementsPage() {
   return (
     <div className="space-y-8">
       <PageHeader title="Achievements" subtitle={`${unlocked} of ${d.achievements.length} unlocked`} />
+      <p className="-mt-4 max-w-prose text-sm text-muted-foreground"><b className="font-medium text-foreground">How the life streak works.</b> {STREAK_RULE}</p>
 
       <section className="card grid gap-6 p-5 md:grid-cols-[auto_1fr] md:p-6">
         <div className="flex items-center gap-4 md:flex-col md:px-3 md:text-center">

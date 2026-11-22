@@ -401,17 +401,21 @@ export const useStore = create<State>()((set, get) => {
       const tz = tzNow(d.settings);
       const today = todayIn(tz);
       const repair = !d.library.daysRepaired;
-      const result = importLibrary({ feed, goalId: d.library.goalId, seen: d.library.seen, goals: d.goals, logs: d.logs, today, tz, now: Date.now(), repair });
+      const result = importLibrary({ feed, goalId: d.library.goalId, seen: d.library.seen, goals: d.goals, logs: d.logs, today, tz, now: Date.now(), repair, repairedBooks: d.library.repairedBooks });
       const changed = result.added + result.updated + result.removed > 0;
       const moved = JSON.stringify(result.seen) !== JSON.stringify(d.library.seen);
-      if (!changed && !moved && !result.repaired) return;
+      if (!changed && !moved && !result.repaired && !(repair && result.repairDone)) return;
       const recent = result.changedDates.some((date) => date >= addDays(today, -6));
       update(
         (x) => ({
           ...x,
           logs: result.logs,
           goals: result.goals,
-          library: x.library && { ...x.library, seen: result.seen, ...(result.repaired ? { daysRepaired: true } : {}) },
+          library: x.library && {
+            ...x.library,
+            seen: result.seen,
+            ...(repair ? { repairedBooks: result.repairedBooks, ...(result.repairDone ? { daysRepaired: true } : {}) } : {}),
+          },
         }),
         recent,
       );

@@ -11,6 +11,7 @@ import { fmtFull } from "@/lib/engine/dates";
 import type { GoalView, MilestoneView } from "@/lib/engine/derive";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import { NativeSelect } from "@/components/ui/native-select";
 
 function Row({ m, today, line, last, onTrack, hideVia }: { m: MilestoneView; today: string; line?: boolean; last?: boolean; onTrack?: (m: MilestoneView) => void; hideVia?: string }) {
   const goalName = useDerived().byId.get(m.goalId ?? "")?.goal.name;
@@ -98,18 +99,18 @@ export function AddMilestone({ goal, roadmapId, goals }: { goal?: GoalView; road
     <form onSubmit={submit} className="mt-2 flex flex-wrap items-center gap-2">
       <Input aria-label="New milestone" placeholder="Add a milestone" value={title} onChange={(e) => setTitle(e.target.value)} className="h-9 min-w-40 flex-1 rounded-xl" />
       {goals && goals.length > 0 && title && (
-        <select aria-label="Measured by goal" value={picked} onChange={(e) => { setPicked(e.target.value); setMetric(""); }} className="h-9 rounded-xl border bg-transparent px-2 text-sm">
+        <NativeSelect aria-label="Measured by goal" value={picked} onChange={(e) => { setPicked(e.target.value); setMetric(""); }} >
           <option value="">Tick off by hand</option>
           {goals.map((g) => <option key={g.goal.id} value={g.goal.id}>Measured by {g.goal.name}</option>)}
-        </select>
+        </NativeSelect>
       )}
       {source && title && (
         <>
           <Input aria-label="Target amount" inputMode="numeric" placeholder="Target" value={target} onChange={(e) => setTarget(e.target.value)} className="h-9 w-20 rounded-xl" />
-          <select aria-label="Target unit" value={metric} onChange={(e) => setMetric(e.target.value)} className="h-9 rounded-xl border bg-transparent px-2 text-sm">
+          <NativeSelect aria-label="Target unit" value={metric} onChange={(e) => setMetric(e.target.value)} >
             <option value="">No target</option>
             {options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-          </select>
+          </NativeSelect>
         </>
       )}
       <button type="submit" aria-label="Add milestone" className="grid size-9 shrink-0 place-items-center rounded-xl bg-secondary"><Plus size={16} /></button>

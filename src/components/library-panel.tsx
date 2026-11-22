@@ -14,6 +14,7 @@ import { getLibraryLink, libraryBuiltIn, saveLibraryLink } from "@/lib/links";
 import { useStore } from "@/lib/store";
 import { useUI } from "@/lib/ui";
 import { fmtHours, plural } from "@/lib/utils";
+import { NativeSelect } from "@/components/ui/native-select";
 
 function Connect({ feed }: { feed: LibraryFeed }) {
   const data = useStore((s) => s.data);
@@ -33,15 +34,15 @@ function Connect({ feed }: { feed: LibraryFeed }) {
         <p className="text-sm">Library</p>
         <p className="text-xs text-muted-foreground">Our Library is reachable. Choose the goal that your reading counts towards.</p>
       </div>
-      <select
+      <NativeSelect
         aria-label="Goal for Library reading"
         value={goalId}
         onChange={(e) => setGoalId(e.target.value)}
-        className="h-9 max-w-64 rounded-xl border bg-transparent px-2 text-sm"
+        className="max-w-64"
       >
         <option value="">Choose a goal</option>
         {d.goals.map((g) => <option key={g.goal.id} value={g.goal.id}>{g.goal.name}</option>)}
-      </select>
+      </NativeSelect>
       {preview && preview.added + preview.books > 0 ? (
         <p className="text-xs text-muted-foreground">
           This adds <b className="num font-medium text-foreground">{plural(preview.books, "finished book")}</b>
@@ -73,9 +74,11 @@ function Connect({ feed }: { feed: LibraryFeed }) {
 function LibrarySignIn({ onDone }: { onDone: () => void }) {
   const saved = getLibraryLink();
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   return (
     <LinkForm
       busy={busy}
+      error={error}
       note={
         libraryBuiltIn
           ? "Your Library account. Kept on this device only, never in LifeOS's data or backups."
@@ -87,11 +90,16 @@ function LibrarySignIn({ onDone }: { onDone: () => void }) {
         { name: "person", label: "Whose reading to follow", initial: saved?.person ?? "chikaze" },
       ]}
       onSave={async (v) => {
+        setError("");
         saveLibraryLink({ email: v.email, password: v.password, person: v.person });
         setBusy(true);
         const r = await checkLibrary();
         setBusy(false);
-        if (r.available) onDone();
+        if (r.available) return onDone();
+        // A sign-in that didn't work is not kept: the one that did stays.
+        saveLibraryLink(saved);
+        setError(r.reason);
+        void checkLibrary();
       }}
       onForget={
         saved

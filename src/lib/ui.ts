@@ -19,6 +19,8 @@ export interface LogPreset {
   minutes?: number;
   /** Opens as an edit of this entry. */
   editing?: LogEntry;
+  /** Opened from a stopped timer: the timer is cleared once this is logged, not before. */
+  fromTimer?: boolean;
   /** Opens as a body-weight entry. */
   weighIn?: boolean;
 }

@@ -5,6 +5,7 @@
  *
  * Needs FIREBASE_SERVICE_ACCOUNT: the JSON key of a Firebase service account.
  */
+import { gunzipSync } from "node:zlib";
 import { cert, initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
@@ -35,18 +36,21 @@ const main = async () => {
 
     const state = await user.collection("sync").doc("state").get();
     if (!state.exists) continue;
-    const data = migrate(JSON.parse(state.get("json") as string)) as AppData;
+    const gz = state.get("gz") as string | undefined;
+    const text = gz ? gunzipSync(Buffer.from(gz, "base64")).toString("utf8") : (state.get("json") as string);
+    const data = migrate(JSON.parse(text)) as AppData;
 
     const reminderDoc = user.collection("sync").doc("reminder");
     const lastSent = ((await reminderDoc.get()).get("date") as string | undefined) ?? null;
 
     // One reminder a day per person. A device with its own hour decides when it is due.
     let reminderDate: string | null = null;
+    let delivered = false;
     for (const device of devices.docs) {
       const { token, timeZone, hour } = device.data() as DeviceDoc;
       const reminder = planReminder({ data, deviceTimezone: timeZone, hour, now, lastSent });
       if (!reminder) continue;
-      reminderDate = reminder.date;
+      reminderDate ??= reminder.date;
       console.log(`${dryRun ? "[dry run] " : ""}${user.id} · ${device.id.slice(0, 6)}: ${reminder.title} — ${reminder.body}`);
       if (dryRun) continue;
       try {
@@ -56,14 +60,16 @@ const main = async () => {
           webpush: { headers: { Urgency: "high", TTL: "7200" } },
         });
         sent++;
+        delivered = true;
       } catch (error) {
         const code = (error as { code?: string }).code ?? "";
         // The phone uninstalled the app or turned notifications off, so forget it.
-        if (code.includes("registration-token-not-registered") || code.includes("invalid-argument")) await device.ref.delete();
+        if (code.includes("registration-token-not-registered")) await device.ref.delete();
         else console.error(`Could not send to ${device.id.slice(0, 6)}:`, code);
       }
     }
-    if (reminderDate && !dryRun) await reminderDoc.set({ date: reminderDate, sentAt: now.toISOString() });
+    // Only a reminder that reached a device counts, so a failed night is tried again.
+    if (reminderDate && delivered && !dryRun) await reminderDoc.set({ date: reminderDate, sentAt: now.toISOString() });
   }
   console.log(`${dryRun ? "Dry run" : "Done"}: ${sent} sent.`);
 };

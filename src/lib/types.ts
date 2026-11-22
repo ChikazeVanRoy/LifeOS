@@ -194,6 +194,8 @@ export interface LibraryLink {
   seen: Record<string, number>;
   /** Pages logged before LifeOS read Library's reading log have been moved to the days they were read. */
   daysRepaired?: boolean;
+  /** Books whose earlier pages have been put on the right days, while the repair is still waiting on others. */
+  repairedBooks?: string[];
 }
 
 export type ThemePref = "system" | "light" | "dark";

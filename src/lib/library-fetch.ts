@@ -133,8 +133,8 @@ export const fetchLibrary = async (config: LibraryConfig): Promise<LibraryFeed> 
   // The reading log (Library's reading-log.sql) is optional: without it, pages land on the day they are seen.
   const since = encodeURIComponent(new Date(Date.now() - LOG_DAYS * 86_400_000).toISOString());
   const [readings, books, log] = await Promise.all([
-    read<ReadingRow>("readings", "book_id,status,finish_date,progress", "book_id,status,finish_date", `&person=eq.${person}&status=in.(Reading,Read)`),
-    read<BookRow>("books", "id,title,volume,pages", "id,title,volume"),
+    read<ReadingRow>("readings", "book_id,status,finish_date,progress", "book_id,status,finish_date", `&person=eq.${person}&status=in.(Reading,Read)&order=book_id`),
+    read<BookRow>("books", "id,title,volume,pages", "id,title,volume", "&order=id"),
     rows<LogRow>(config, token, "reading_log", `select=book_id,from_page,to_page,at&person=eq.${person}&at=gte.${since}&order=at.asc,id.asc`).catch(() => []),
   ]);
   const feed = toFeed(readings, books, new Date().toISOString(), log);

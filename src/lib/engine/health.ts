@@ -50,7 +50,9 @@ export const importHealth = ({ days, goals, logs, today, tz, now }: { days: Heal
       }
       continue;
     }
-    const minutes = Math.round(day.workoutMinutes ?? 0);
+    // A day sent without exercise minutes says nothing about exercise: what is there stays.
+    if (day.workoutMinutes === undefined) continue;
+    const minutes = Math.round(day.workoutMinutes);
     if (!(minutes >= floor)) {
       if (old) {
         replaced.set(id, null);

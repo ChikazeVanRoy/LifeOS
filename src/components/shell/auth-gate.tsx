@@ -4,11 +4,11 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { authMessage, cloudEnabled, resetPassword, setCloudUid, signIn, signUp, watchUser } from "@/lib/cloud";
+import { authMessage, cloudEnabled, refreshUser, resendVerification, resetPassword, setCloudUid, signIn, signOut, signUp, watchUser } from "@/lib/cloud";
 import { useStore } from "@/lib/store";
 import { Logo } from "./shell";
 
-type Auth = { state: "checking" } | { state: "out" } | { state: "in"; uid: string; email: string };
+type Auth = { state: "checking" } | { state: "out" } | { state: "verify"; email: string } | { state: "in"; uid: string; email: string };
 
 /** Who is signed in, or "in" with no account when cloud sync is off. */
 let current: Auth = { state: "checking" };
@@ -33,6 +33,11 @@ export function AuthGate({ children }: { children: ReactNode }) {
         setAuth(current);
         return;
       }
+      if (!user.emailVerified) {
+        current = { state: "verify", email: user.email ?? "" };
+        setAuth(current);
+        return;
+      }
       setCloudUid(user.uid);
       current = { state: "in", uid: user.uid, email: user.email ?? "" };
       setAuth(current);
@@ -42,6 +47,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   if (auth.state === "checking") return <Splash />;
   if (auth.state === "out") return <Login />;
+  if (auth.state === "verify") return <Verify email={auth.email} />;
   return <>{children}</>;
 }
 
@@ -50,6 +56,49 @@ const Splash = () => (
     <Logo size={32} />
   </div>
 );
+
+function Verify({ email }: { email: string }) {
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const check = async () => {
+    setBusy(true);
+    try {
+      // Verified: reloading starts the app with the account's data.
+      if (await refreshUser()) location.reload();
+      else setNote("Not verified yet. Open the link in the email, then tap this again.");
+    } catch {
+      setNote("Couldn't check. Try again in a moment.");
+    }
+    setBusy(false);
+  };
+  const resend = async () => {
+    try {
+      await resendVerification();
+      setNote("Sent. Check your inbox and spam folder.");
+    } catch (err) {
+      setNote(authMessage(err));
+    }
+  };
+
+  return (
+    <div className="grid min-h-dvh place-items-center px-6">
+      <div className="w-full max-w-sm space-y-4 text-center">
+        <div className="mb-6 flex flex-col items-center gap-3">
+          <Logo size={40} />
+          <h1 className="text-xl font-semibold">Verify your email</h1>
+          <p className="text-sm text-muted-foreground">We sent a link to {email}. Your data opens once it is verified.</p>
+        </div>
+        {note && <p role="status" className="text-sm text-muted-foreground">{note}</p>}
+        <Button className="w-full" disabled={busy} onClick={check}>I&apos;ve verified</Button>
+        <div className="flex justify-between text-[13px] text-muted-foreground">
+          <button type="button" className="underline-offset-2 hover:underline" onClick={resend}>Send the email again</button>
+          <button type="button" className="underline-offset-2 hover:underline" onClick={() => signOut()}>Sign out</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function Login() {
   const [mode, setMode] = useState<"in" | "up">("in");

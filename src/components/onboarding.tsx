@@ -206,7 +206,7 @@ export function Onboarding() {
           <div key={title} className="card flex items-center gap-3 p-3">
             <GoalBadge icon="mountain" color="lime" size={40} />
             <span className="min-w-0 flex-1 truncate text-[15px] font-medium">{title}</span>
-            <button aria-label={`Remove ${title}`} onClick={() => setOwnRoadmaps((x) => x.filter((y) => y !== title))} className="grid size-8 place-items-center text-muted-foreground"><X size={15} /></button>
+            <button aria-label={`Remove ${title}`} onClick={() => setOwnRoadmaps((x) => x.filter((y) => y !== title))} className="grid size-8 pointer-coarse:size-11 place-items-center text-muted-foreground"><X size={15} /></button>
           </div>
         ))}
       </div>

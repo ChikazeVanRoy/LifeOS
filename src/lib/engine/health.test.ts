@@ -15,6 +15,13 @@ describe("importHealth", () => {
     expect(r.logs[0]).toMatchObject({ id: "health-2026-11-19", goalId: "fitness", minutes: 32, source: "health", typeId: "cardio" });
   });
 
+  it("leaves a day alone when it came without exercise minutes", () => {
+    const first = run([{ date: "2026-11-19", workoutMinutes: 45 }]);
+    const r = run([{ date: "2026-11-19" }], first.logs);
+    expect(r.changed).toBe(false);
+    expect(r.logs).toHaveLength(1);
+  });
+
   it("updates a day when the number grows, and does nothing when it is the same", () => {
     const first = run([{ date: "2026-11-19", workoutMinutes: 20 }]);
     const again = run([{ date: "2026-11-19", workoutMinutes: 20 }], first.logs);

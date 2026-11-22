@@ -4,8 +4,10 @@ service cloud.firestore {
   // Two people share this app. Each can read the other's data, but only write their own.
   // Who they are lives in the database, in config/household (a list of emails), not in this
   // public repository. Only the Firebase console or an admin can change that document.
+  // The email must be verified, so nobody can claim a listed address just by signing up with it.
   function household() {
     return request.auth != null
+      && request.auth.token.email_verified == true
       && request.auth.token.email.lower() in get(/databases/(default)/documents/config/household).data.emails;
   }
 

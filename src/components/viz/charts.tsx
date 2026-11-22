@@ -93,7 +93,7 @@ export function ChartCard({ title, subtitle, children, table, right, className, 
         <div className="flex shrink-0 items-center gap-1">
           {right}
           {table && (
-            <button aria-pressed={showTable} aria-label="Show as table" onClick={() => setShowTable((v) => !v)} className={cn("grid size-8 place-items-center rounded-lg text-muted-foreground transition-colors hover:text-foreground", showTable && "bg-secondary text-foreground")}>
+            <button aria-pressed={showTable} aria-label="Show as table" onClick={() => setShowTable((v) => !v)} className={cn("grid size-8 pointer-coarse:size-11 place-items-center rounded-lg text-muted-foreground transition-colors hover:text-foreground", showTable && "bg-secondary text-foreground")}>
               <Table2 size={15} />
             </button>
           )}

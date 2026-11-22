@@ -139,6 +139,7 @@ const appData = z.object({
       connectedAt: z.string(),
       seen: z.record(z.string(), z.number().int().min(0)),
       daysRepaired: z.boolean().optional(),
+      repairedBooks: z.array(z.string()).optional(),
     })
     .nullable()
     .optional()
