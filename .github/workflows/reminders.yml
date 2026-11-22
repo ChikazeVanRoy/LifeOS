@@ -2,9 +2,9 @@ name: Send reminders
 
 on:
   schedule:
-    # Off the hour and half hour, when GitHub delays scheduled runs the most. GitHub can still skip
-    # runs for hours, so reminders.ts only sends within two hours of the chosen time.
-    - cron: "7,22,37,52 * * * *"
+    # GitHub can leave hours between scheduled runs, so each run keeps checking every 15 minutes for
+    # almost six hours, and these starts keep the next run queued to take over when it ends.
+    - cron: "7,37 * * * *"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -12,12 +12,15 @@ on:
         type: boolean
         default: false
 
-concurrency: reminders
+# One at a time. A run started meanwhile waits its turn instead of cancelling the one checking now.
+concurrency:
+  group: reminders
+  cancel-in-progress: false
 
 jobs:
   send:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -39,3 +42,5 @@ jobs:
           ANKI_FIREBASE_PROJECT_ID: ${{ secrets.ANKI_FIREBASE_PROJECT_ID }}
           ANKI_FIREBASE_API_KEY: ${{ secrets.ANKI_FIREBASE_API_KEY }}
           DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+          # A dry run checks once. Otherwise, keep checking until just before the six-hour job limit.
+          LOOP_MINUTES: ${{ inputs.dry_run && '0' || '340' }}

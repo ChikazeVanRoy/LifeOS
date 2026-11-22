@@ -1,5 +1,6 @@
 /**
- * Sends the evening reminders. GitHub Actions runs it every half hour.
+ * Sends the evening reminders. GitHub Actions starts it, and with LOOP_MINUTES set it keeps checking
+ * every 15 minutes for that long, because GitHub's own schedule can leave hours between runs.
  * It reads each person's data and the devices they turned reminders on for, and sends a push only
  * when `planReminder` says so. Set DRY_RUN=1 to see what would be sent without sending.
  *
@@ -29,7 +30,10 @@ import type { AppData } from "../src/lib/types";
 const key = process.env.FIREBASE_SERVICE_ACCOUNT;
 if (!key) throw new Error("FIREBASE_SERVICE_ACCOUNT is not set");
 const dryRun = process.env.DRY_RUN === "1";
-const now = process.env.REMIND_NOW ? new Date(process.env.REMIND_NOW) : new Date();
+/** The time of the current check. Set again before each one. */
+let now = process.env.REMIND_NOW ? new Date(process.env.REMIND_NOW) : new Date();
+const loopMinutes = Number(process.env.LOOP_MINUTES || 0);
+const EVERY_MS = 15 * 60_000;
 
 initializeApp({ credential: cert(JSON.parse(key)) });
 const db = getFirestore();
@@ -137,7 +141,19 @@ const main = async () => {
   console.log(`${dryRun ? "Dry run" : "Done"}: ${sent} sent.`);
 };
 
-main().catch((error) => {
+/** One check, or one every 15 minutes until LOOP_MINUTES is up. A failed check doesn't stop the next. */
+const run = async () => {
+  if (!loopMinutes) return main();
+  const until = Date.now() + loopMinutes * 60_000;
+  for (;;) {
+    now = new Date();
+    await main().catch((error) => console.error("Check failed:", error));
+    if (Date.now() + EVERY_MS > until) return;
+    await new Promise((resolve) => setTimeout(resolve, EVERY_MS));
+  }
+};
+
+run().catch((error) => {
   console.error(error);
   process.exit(1);
 });
