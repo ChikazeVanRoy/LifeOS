@@ -114,7 +114,7 @@ function RemindersRow() {
       : state === "blocked"
         ? "Notifications are blocked for LifeOS. Allow them in your device's settings, then come back."
         : state === "on"
-          ? `Once a day from ${hourLabel(hour)}, only if something planned is still open.`
+          ? `Once a day between ${hourLabel(hour)} and ${hourLabel(hour + 2)}, only if something planned is still open. Never later, when it's too late to act.`
           : "Get a nudge in the evening when something planned for today is still open.";
 
   return (
@@ -128,7 +128,7 @@ function RemindersRow() {
             onChange={(e) => { const h = Number(e.target.value); setHour(h); void run(() => changeHour(h)); }}
             
           >
-            {Array.from({ length: 17 }, (_, i) => i + 6).map((h) => <option key={h} value={h}>{hourLabel(h)}</option>)}
+            {Array.from({ length: 15 }, (_, i) => i + 6).map((h) => <option key={h} value={h}>{hourLabel(h)}</option>)}
           </NativeSelect>
           <Button variant="secondary" size="sm" disabled={busy} onClick={() => run(async () => { await showTest(); })}>Test</Button>
           <Button variant="secondary" size="sm" disabled={busy} onClick={() => run(async () => { await disablePush(); return "off"; })}>Turn off</Button>

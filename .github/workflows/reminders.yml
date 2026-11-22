@@ -2,7 +2,9 @@ name: Send reminders
 
 on:
   schedule:
-    - cron: "*/30 * * * *"
+    # Off the hour and half hour, when GitHub delays scheduled runs the most. GitHub can still skip
+    # runs for hours, so reminders.ts only sends within two hours of the chosen time.
+    - cron: "7,22,37,52 * * * *"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -26,4 +28,14 @@ jobs:
       - run: npx tsx scripts/send-reminders.ts
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          # Optional: lets the sender see reading and reviews done since the app was last opened.
+          CONNECTIONS_UID: ${{ secrets.CONNECTIONS_UID }}
+          LIBRARY_EMAIL: ${{ secrets.LIBRARY_EMAIL }}
+          LIBRARY_PASSWORD: ${{ secrets.LIBRARY_PASSWORD }}
+          LIBRARY_SUPABASE_URL: ${{ secrets.LIBRARY_SUPABASE_URL }}
+          LIBRARY_SUPABASE_ANON_KEY: ${{ secrets.LIBRARY_SUPABASE_ANON_KEY }}
+          ANKI_EMAIL: ${{ secrets.ANKI_EMAIL }}
+          ANKI_PASSWORD: ${{ secrets.ANKI_PASSWORD }}
+          ANKI_FIREBASE_PROJECT_ID: ${{ secrets.ANKI_FIREBASE_PROJECT_ID }}
+          ANKI_FIREBASE_API_KEY: ${{ secrets.ANKI_FIREBASE_API_KEY }}
           DRY_RUN: ${{ inputs.dry_run && '1' || '' }}

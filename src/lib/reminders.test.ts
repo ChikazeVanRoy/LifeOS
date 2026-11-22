@@ -23,6 +23,10 @@ describe("planReminder", () => {
     expect(r?.date).toBe("2026-03-04");
     expect(r?.body).toMatch(/still open today/);
   });
+  it("stays quiet once it is too late to help", () => {
+    expect(ask({ now: new Date("2026-03-04T22:05:00Z") })).toBeNull();
+    expect(ask({ now: new Date("2026-03-04T21:59:00Z") })).not.toBeNull();
+  });
   it("only once a day", () => {
     expect(ask({ lastSent: "2026-03-04" })).toBeNull();
   });
