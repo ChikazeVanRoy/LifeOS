@@ -21,7 +21,7 @@ import { importAnki } from "../src/lib/engine/anki";
 import { resolveTz, todayIn } from "../src/lib/engine/dates";
 import { importHealth } from "../src/lib/engine/health";
 import { importLibrary } from "../src/lib/engine/library";
-import { num } from "../src/lib/health-num";
+import { healthDay } from "../src/lib/health-num";
 import { fetchLibrary } from "../src/lib/library-fetch";
 import { migrate } from "../src/lib/migrate";
 import { planReminder, reminderDue } from "../src/lib/reminders";
@@ -57,7 +57,7 @@ const catchUp = async (user: DocumentReference, saved: AppData, deviceTz: string
   try {
     const from = new Date(at - 3 * 86_400_000).toLocaleDateString("en-CA", { timeZone: tz });
     const snap = await user.collection("health").where(FieldPath.documentId(), ">=", from).get();
-    const days = snap.docs.map((d) => ({ date: d.id, workoutMinutes: num(d.get("workoutMinutes")) }));
+    const days = snap.docs.map((d) => healthDay(d.id, d.data()));
     data = { ...data, logs: importHealth({ days, goals: data.goals, logs: data.logs, today, tz, now: at }).logs };
   } catch (error) {
     console.error("Health catch-up skipped:", (error as Error).message);

@@ -12,7 +12,7 @@ import {
   type User,
 } from "firebase/auth";
 import { collection, deleteDoc, doc, documentId, getDoc, getDocs, getFirestore, query, runTransaction, setDoc, where, writeBatch } from "firebase/firestore";
-import { num } from "./health-num";
+import { healthDay, num } from "./health-num";
 import { parseImport } from "./io";
 
 export { num };
@@ -243,10 +243,7 @@ export const readHealth = async (days = 14): Promise<HealthDay[]> => {
   const from = new Date(Date.now() - (days + 2) * 86_400_000).toLocaleDateString("en-CA");
   const snap = await getDocs(query(collection(db(), "users", uid, "health"), where(documentId(), ">=", from)));
   const docs = snap.docs.sort((a, b) => (a.id < b.id ? 1 : -1)).slice(0, days);
-  return docs.map((d) => {
-    const x = d.data();
-    return { date: d.id, steps: num(x.steps), weight: num(x.weight), sleepHours: num(x.sleepHours), workoutMinutes: num(x.workoutMinutes) };
-  });
+  return docs.map((d) => healthDay(d.id, d.data()));
 };
 
 /**

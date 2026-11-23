@@ -111,8 +111,9 @@ export function HealthPanel() {
             <li>Add <b>Find Health Samples</b>: Type Exercise Minutes, Start Date <b>is today</b>, Group By <b>Day</b>. Add <b>If</b> it has any value, then <b>Get Details of Health Sample</b> (Value, not Duration), <b>Calculate Statistics</b> (Sum), <b>Set Variable</b> <code>Minutes</code>, <b>End If</b>.</li>
             <li className="list-none">Group By Day makes Health add up your iPhone and Apple Watch the way the Health app does, so the same steps aren&apos;t counted twice. <b>Is today</b> starts at midnight, while &quot;in the last 1 days&quot; reaches back into yesterday.</li>
             <li>Add <b>Text</b>: paste the message. Replace <code>STEPS</code> and <code>MINUTES</code> by tapping the <code>Steps</code> and <code>Minutes</code> variables.</li>
-            <li>Add <b>Get Contents of URL</b>. For the address, paste the first part, then the <b>Formatted Date</b> variable, then paste the last part. Method <b>PATCH</b>, header <code>Content-Type</code> = <code>application/json</code>, request body <b>File</b> = the Text.</li>
-            <li>Run it once and check this page. Then add a Personal Automation, Time of Day, 11:55 PM, Run Immediately.</li>
+            <li>Add <b>If</b> <code>Steps</code> is greater than <code>0</code>. Inside it, add <b>Get Contents of URL</b>. For the address, paste the first part, then the <b>Formatted Date</b> variable, then paste the last part. Method <b>PATCH</b>, header <code>Content-Type</code> = <code>application/json</code>, request body <b>File</b> = the Text. Then <b>End If</b>.</li>
+            <li className="list-none">A locked iPhone hides Health from Shortcuts, so a run then finds 0 steps. The If stops that run from replacing the day&apos;s real numbers with zeros.</li>
+            <li>Run it once and check this page. Then add Personal Automations, Time of Day, Run Immediately, at a few times you usually have your phone in hand, such as 12:30 PM, 5:30 PM and 9:30 PM. Each run sends the day so far, so your evening reminder knows what you&apos;ve done.</li>
           </ol>
           <Button variant="ghost" size="sm" disabled={busy} onClick={() => open(true)}>Make a new key</Button>
         </div>
