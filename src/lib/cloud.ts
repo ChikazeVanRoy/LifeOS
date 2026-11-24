@@ -226,6 +226,13 @@ export const removeDevice = async (id: string) => {
   await deleteDoc(deviceRef(uid, id));
 };
 
+/** The reminder hour of every device this person turned reminders on for. */
+export const readDeviceHours = async (): Promise<{ id: string; hour: number }[]> => {
+  if (!uid) return [];
+  const snap = await getDocs(collection(db(), "users", uid, "devices"));
+  return snap.docs.map((d) => ({ id: d.id, hour: Number(d.get("hour")) })).filter((d) => Number.isFinite(d.hour));
+};
+
 export const firebaseApp = app;
 
 /** One day of numbers from Apple Health, written by an iPhone Shortcut. Every field is optional. */

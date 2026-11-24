@@ -2,7 +2,7 @@
 
 import { deleteToken, getMessaging, getToken, isSupported } from "firebase/messaging";
 import { deviceTimezone } from "./engine/dates";
-import { cloudEnabled, firebaseApp, removeDevice, saveDevice } from "./cloud";
+import { cloudEnabled, firebaseApp, readDeviceHours, removeDevice, saveDevice } from "./cloud";
 import { DEFAULT_REMINDER_HOUR } from "./reminders";
 
 /** Reminders are one device's choice, so what it chose is remembered on the device. */
@@ -29,6 +29,14 @@ const remember = (key: string, value: string | null) => {
 };
 
 export const reminderHour = () => Number(stored(HOUR_KEY) ?? DEFAULT_REMINDER_HOUR);
+
+/** The times other devices remind at, since each is only changed on that device. Empty if unknown. */
+export const otherDeviceHours = async (): Promise<number[]> => {
+  if (!cloudEnabled) return [];
+  const own = stored(ID_KEY);
+  const devices = await readDeviceHours().catch(() => []);
+  return [...new Set(devices.filter((d) => d.id !== own).map((d) => d.hour))].sort((a, b) => a - b);
+};
 
 export const pushState = async (): Promise<PushState> => {
   if (!cloudEnabled || typeof Notification === "undefined" || !("serviceWorker" in navigator) || !(await isSupported().catch(() => false))) return "unsupported";

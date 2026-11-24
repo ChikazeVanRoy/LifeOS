@@ -146,7 +146,7 @@ export function GoalDetail() {
         <div className="card p-4">
           <p className="eyebrow">Streak</p>
           <p className="mt-1.5 flex items-center gap-1.5"><FlameIcon size={26} lit={streak.current > 0} /><span className="font-display num text-[28px] leading-none font-medium">{streak.current}</span></p>
-          <p className="mt-1 text-xs text-muted-foreground">{unitWord}s · best {streak.longest}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{unitWord}s · <span className="whitespace-nowrap">best {streak.longest}</span></p>
           {streak.currentForgiven > 0 && <p className="mt-0.5 text-xs text-muted-foreground">Includes 1 day rest</p>}
         </div>
         <Tile label="Lifetime" value={fmtHours(totals.minutes)} sub={plural(totals.sessions, "session")} />

@@ -20,7 +20,7 @@ import { cloudEnabled, signOut } from "@/lib/cloud";
 import { checkUpdate, installUpdate, revealFile } from "@/lib/file-sync";
 import { signedInEmail } from "@/components/shell/auth-gate";
 import { parseImport, toExport } from "@/lib/io";
-import { changeHour, disablePush, enablePush, pushState, reminderHour, showTest, type PushState } from "@/lib/push";
+import { changeHour, disablePush, enablePush, otherDeviceHours, pushState, reminderHour, showTest, type PushState } from "@/lib/push";
 import { useStore } from "@/lib/store";
 import { useUI } from "@/lib/ui";
 import type { AppData, Goal, ThemePref, WeightUnit } from "@/lib/types";
@@ -92,8 +92,10 @@ function RemindersRow() {
   const [state, setState] = useState<PushState | "checking">("checking");
   const [hour, setHour] = useState(reminderHour);
   const [busy, setBusy] = useState(false);
+  const [others, setOthers] = useState<number[]>([]);
   useEffect(() => {
     void pushState().then(setState);
+    void otherDeviceHours().then(setOthers);
   }, []);
 
   const run = async (fn: () => Promise<PushState | void>) => {
@@ -108,7 +110,10 @@ function RemindersRow() {
     }
   };
 
-  const hint =
+  const elsewhere = others.length
+    ? ` Your ${others.length === 1 ? "other device reminds" : "other devices remind"} from ${others.map(hourLabel).join(", ")}; change that on the device itself.`
+    : "";
+  const base =
     state === "unsupported"
       ? "This browser can't show reminders. On an iPhone, add LifeOS to your Home Screen first, then open it from there."
       : state === "blocked"
@@ -116,6 +121,7 @@ function RemindersRow() {
         : state === "on"
           ? `Once a day between ${hourLabel(hour)} and ${hourLabel(hour + 2)}, only if something planned is still open. Never later, when it's too late to act.`
           : "Get a nudge in the evening when something planned for today is still open.";
+  const hint = base + elsewhere;
 
   return (
     <Row label="Reminders" hint={hint}>

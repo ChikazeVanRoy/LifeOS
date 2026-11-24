@@ -18,9 +18,12 @@ service cloud.firestore {
     }
     // An iPhone Shortcut can add one day of health numbers without signing in, by including the
     // secret in users/{owner}/config/health. It can write only these few fields, to a date-named
-    // document, and cannot read anything.
+    // document, and cannot read anything. A locked iPhone hides Health, so a run then sends 0 steps
+    // and 0 minutes; that is refused, so it can't replace the day's real numbers.
     match /users/{owner}/health/{day} {
       allow create, update: if day.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        && !(request.resource.data.get('steps', '') in ['0', 0]
+             && request.resource.data.get('workoutMinutes', '0') in ['0', 0, ''])
         && request.resource.data.keys().hasOnly(['key', 'steps', 'workoutMinutes', 'weight', 'sleepHours'])
         && request.resource.data.key is string
         && request.resource.data.key == get(/databases/(default)/documents/users/$(owner)/config/health).data.key;

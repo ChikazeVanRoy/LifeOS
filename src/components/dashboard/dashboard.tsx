@@ -138,7 +138,7 @@ function Hero({ d, name }: { d: Derived; name: string }) {
               <AnimatedNumber value={streak.current} className="font-display text-[30px] leading-none font-medium md:text-[40px]" />
               <span className="text-sm text-muted-foreground">{streak.current === 1 ? "day" : "days"}</span>
             </p>
-            <p className="num mt-1 text-xs text-muted-foreground" title="Days in a row you kept up with every goal. A goal needs you on its scheduled days, or on the last days of a week when its weekly target is still short. Each goal can miss one day per streak; a second miss ends it.">Life streak · best {streak.longest}</p>
+            <p className="num mt-1 text-xs text-muted-foreground" title="Days in a row you kept up with every goal. A goal needs you on its scheduled days, or on the last days of a week when its weekly target is still short. Each goal can miss one day per streak; a second miss ends it.">Life streak · <span className="whitespace-nowrap">best {streak.longest}</span></p>
             <p className="num mt-0.5 hidden text-xs text-muted-foreground md:block">{needed.length ? `${neededDone} of ${needed.length} needed today` : "Nothing needed today"}</p>
           </div>
         </div>

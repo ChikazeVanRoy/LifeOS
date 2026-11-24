@@ -5,6 +5,8 @@ on:
     # GitHub can leave hours between scheduled runs, so each run keeps checking every 15 minutes for
     # almost six hours, and these starts keep the next run queued to take over when it ends.
     - cron: "7,37 * * * *"
+  # Each run starts the next one as it finishes, so the checks carry on without a gap. The schedule
+  # above only restarts the chain if it ever breaks.
   workflow_dispatch:
     inputs:
       dry_run:
@@ -16,6 +18,10 @@ on:
 concurrency:
   group: reminders
   cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write
 
 jobs:
   send:
@@ -44,3 +50,9 @@ jobs:
           DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
           # A dry run checks once. Otherwise, keep checking until just before the six-hour job limit.
           LOOP_MINUTES: ${{ inputs.dry_run && '0' || '340' }}
+      # Hand over to the next run. A dry run doesn't, and a failing run leaves the restart to the schedule.
+      - name: Start the next run
+        if: ${{ success() && !inputs.dry_run }}
+        run: gh workflow run reminders.yml --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME"
+        env:
+          GH_TOKEN: ${{ github.token }}
