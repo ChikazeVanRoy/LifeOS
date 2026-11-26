@@ -45,7 +45,8 @@ export const syncAnki = async () => {
   return check;
 };
 
-const EVERY = 60_000;
+/** The local route is cheap. The hosted site reads a cloud copy that only changes when Anki quits. */
+const EVERY = hosted ? 5 * 60_000 : 60_000;
 
 /** Keeps a connected account current while the app is open. Demo mode never syncs. */
 export const useAnkiAutoSync = () => {
