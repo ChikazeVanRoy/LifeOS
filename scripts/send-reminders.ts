@@ -46,6 +46,20 @@ interface DeviceDoc {
 }
 
 const env = (name: string) => process.env[name]?.trim() || "";
+const onGitHub = !!process.env.GITHUB_ACTIONS;
+
+/** Says once, without any values, when a connection has some of its settings but not all. */
+const warned = new Set<string>();
+const partly = (name: string, keys: string[]) => {
+  const missing = keys.filter((k) => !env(k));
+  if (missing.length && missing.length < keys.length && !warned.has(name)) {
+    warned.add(name);
+    console.log(`${name} catch-up is off until these are set: ${missing.join(", ")}.`);
+  }
+  return !missing.length;
+};
+const ANKI_KEYS = ["ANKI_EMAIL", "ANKI_PASSWORD", "ANKI_FIREBASE_PROJECT_ID", "ANKI_FIREBASE_API_KEY"];
+const LIBRARY_KEYS = ["LIBRARY_EMAIL", "LIBRARY_PASSWORD", "LIBRARY_SUPABASE_URL", "LIBRARY_SUPABASE_ANON_KEY"];
 
 /** Brings in what the connections have that the saved data doesn't yet. Each one that fails is skipped. */
 const catchUp = async (user: DocumentReference, saved: AppData, deviceTz: string): Promise<AppData> => {
@@ -65,7 +79,7 @@ const catchUp = async (user: DocumentReference, saved: AppData, deviceTz: string
 
   if (user.id !== env("CONNECTIONS_UID")) return data;
 
-  if (data.library && env("LIBRARY_EMAIL") && env("LIBRARY_PASSWORD") && env("LIBRARY_SUPABASE_URL") && env("LIBRARY_SUPABASE_ANON_KEY")) {
+  if (data.library && partly("Library", LIBRARY_KEYS)) {
     try {
       const feed = await fetchLibrary({
         url: new URL(env("LIBRARY_SUPABASE_URL")).origin,
@@ -81,7 +95,7 @@ const catchUp = async (user: DocumentReference, saved: AppData, deviceTz: string
     }
   }
 
-  if (data.anki && env("ANKI_EMAIL") && env("ANKI_PASSWORD") && env("ANKI_FIREBASE_PROJECT_ID") && env("ANKI_FIREBASE_API_KEY")) {
+  if (data.anki && partly("Anki", ANKI_KEYS)) {
     const check = await readAnkiCloud({ projectId: env("ANKI_FIREBASE_PROJECT_ID"), apiKey: env("ANKI_FIREBASE_API_KEY"), email: env("ANKI_EMAIL"), password: env("ANKI_PASSWORD") });
     if (check.available) {
       const r = importAnki({ feed: check.feed, mapping: data.anki.mapping, goals: data.goals, logs: data.logs, today, tz, now: at });
@@ -118,7 +132,8 @@ const main = async () => {
       const reminder = planReminder({ data, deviceTimezone: timeZone, hour, now, lastSent });
       if (!reminder) continue;
       reminderDate ??= reminder.date;
-      console.log(`${dryRun ? "[dry run] " : ""}${user.id} · ${device.id.slice(0, 6)}: ${reminder.title} — ${reminder.body}`);
+      // GitHub's logs are public for this repository, so what a reminder says is only shown when run by hand.
+      if (!onGitHub) console.log(`${dryRun ? "[dry run] " : ""}${user.id} · ${device.id.slice(0, 6)}: ${reminder.title} — ${reminder.body}`);
       if (dryRun) continue;
       try {
         await messaging.send({
